@@ -1,5 +1,5 @@
 ##-----------set environment and check--------------------
-setwd("F:/study/Research/Bayesian-lumber-strength/R/Simulation")
+setwd("F:/study/Research/Bayesian-lumber-strength/R/Single simulation")
 require(rstan)
 require(MASS)
 install.packages("jsonlite", type = "source")
@@ -18,7 +18,7 @@ R_pf = c(qnorm(0.2,mu[1],sigma[1]), qnorm(0.4,mu[1],sigma[1]),
           qnorm(0.6,mu[1],sigma[1]))
 T_pf = c(qnorm(0.2,mu[2],sigma[2]),qnorm(0.4,mu[2],sigma[2]),
          qnorm(0.6,mu[2],sigma[2]))
-N = 300
+N = 100
 
 
 ##--------------alpha-----#####
@@ -26,8 +26,8 @@ N = 300
 # alpha_R =1* c(0.4,1.1,0.8)
 # alpha_T =1* c(7.5,6.1,5)
 
-alpha_R = 5* c(0.67,1.83,1.29)
-alpha_T = 5*c(85.23,104.09,65.95)
+alpha_R = 10* c(0.67,1.83,1.29)
+alpha_T = 10*c(85.23,104.09,65.95)
 
 
 # alpha_R = c(0.67,1.83,1.29)
@@ -37,19 +37,6 @@ real_par <- c(rho,alpha_R,alpha_T)
 
 
 
-simulation <- matrix(NA,nrow = 30,ncol = 7)
-colnames(simulation) <- c('rho','alpha_R20','alpha_R40',
-                          'alpha_R60','alpha_T20','alpha_T40','alpha_T60')
-simulation <- as.data.frame(simulation)
-
-cv <- matrix(NA,nrow = nrow(simulation),ncol = 7)
-colnames(cv) <- c('rho','alpha_R20','alpha_R40',
-                          'alpha_R60','alpha_T20','alpha_T40','alpha_T60')
-cv <- as.data.frame(cv)
-
-
-# 10:34
-for(ii in 1:nrow(simulation)){
 ###---------R20---------#####
 
 sd_x = sigma[1]
@@ -273,7 +260,7 @@ T100_data = rnorm(2*N,mean = mu[2],sd = sigma[2])
 ##---------------stan fitting-----------####
 
 #setwd("F:/r/wood/real data analysis")
-#dmg_mod_R <- stan_model("damage_combined.stan")
+suppressMessages(dmg_mod_R <- stan_model("damage_combined.stan"))
 
 initf1 <- function() {
   list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R20 = 1,
@@ -291,47 +278,16 @@ dmg_fit_R <- sampling(object = dmg_mod_R,
                       control = list(adapt_delta = 0.8),init = initf1)
 print(dmg_fit_R,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
                          'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
-pairs(dmg_fit_R,pars = c('rho','alpha_R20','alpha_R40',
-                         'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
+#pairs(dmg_fit_R,pars = c('rho','alpha_R20','alpha_R40',
+#                         'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
 
-simulation[ii,] <-  summary(dmg_fit_R)[[1]][5:11,1]
-print(ii)
+estimation <-  summary(dmg_fit_R)[[1]][5:11,1]
 
 
-cv[ii,]<- as.numeric(real_par >summary(dmg_fit_R)[[1]][5:11,4])*
+ as.numeric(real_par >summary(dmg_fit_R)[[1]][5:11,4])*
   as.numeric(real_par <summary(dmg_fit_R)[[1]][5:11,8])
 
 
-}
-
-colMeans(simulation)
-
-colMeans(cv)
-
-
-  
-print(dmg_fit_R,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
-                           'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
-  
-plot(dmg_fit_R,pars = c('rho','alpha_R20','alpha_R40',
-    'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
-
-pairs(dmg_fit_R,pars = c('rho','alpha_R20','alpha_R40',
-                          'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
-
-load("low_alpha_high_cor.RData")
-
-apply(simulation,2,sd)
-
-
-
-summary(dmg_fit_R)[[1]][5:11,c(4,8)]
-rho
-
-
-
-summary(dmg_fit_R)[[1]][5:11,c(4,8)]
-real_par <- c(rho,alpha_R,alpha_T)
-
-as.numeric(real_par >summary(dmg_fit_R)[[1]][5:11,4])*
-as.numeric(real_par <summary(dmg_fit_R)[[1]][5:11,8])
+# LOOIC
+require(loo)
+loo(dmg_fit_R)
