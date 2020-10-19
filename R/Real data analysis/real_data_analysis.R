@@ -1,9 +1,10 @@
 setwd("F:/study/Research/Bayesian-lumber-strength/Data")
 
+devtools::find_rtools()
 require(rstan)
 require(MASS)
 install.packages("jsonlite", type = "source")
-devtools::find_rtools()
+
 #load("real_data_analysis.RData")
 
 ##-------------convert log to sqrt-------------###
@@ -214,9 +215,14 @@ T60_data <- cbind(T60_data$UTS,T60_data$MOR,T60_data$Broken)
 
 ##------ Stan for all alpha-------------
 setwd("F:/study/Research/Bayesian-lumber-strength/R/Real data analysis")
-dmg_mod_waic <- stan_model("test.stan")
+suppressMessages(dmg_mod_R <- stan_model("damage_combined.stan"))
 
-dmg_fit_waic <- sampling(object = dmg_mod_waic,
+initf_dmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R20 = 1,
+       alpha_R40 = 1,alpha_R60 = 1,alpha_T20 = 1,alpha_T40 =1,alpha_R60 = 1 )
+}
+
+dmg_fit_real <- sampling(object = dmg_mod_R,
                          data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
                                      N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
                                      N_x = length(T100_data),N_y = length(R100_data),
@@ -225,7 +231,7 @@ dmg_fit_waic <- sampling(object = dmg_mod_waic,
                                      t_x = R100_data,t_y = T100_data,
                                      l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
                                      l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
-                         control = list(adapt_delta = 0.8))
+                         control = list(adapt_delta = 0.8),init = initf_dmg)
 
 print(dmg_fit_waic,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
                             'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
@@ -236,10 +242,35 @@ pairs(dmg_fit_waic,pars = c('rho','alpha_R20','alpha_R40',
 
 pairs((extract(dmg_fit_waic)))
 
+
+loo_dmg <- loo(dmg_fit_real)
 ##-------without alpha---------
 
+wood_mod_waic <- stan_model("wood_combined.stan")
+initf_nondmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5)
+}
+wood_fit_waic <- sampling(object = wood_mod_waic,
+                          data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                      N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                      N_x = length(T100_data),N_y = length(R100_data),
+                                      X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                      X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                      t_x = R100_data,t_y = T100_data,
+                                      l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                      l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                          control = list(adapt_delta = 0.8),init = initf_nondmg)
+print(wood_fit_waic,pars = c('mu','sigma','rho'))
+
+# LOOIC
+
+loo_nodamage <- loo(wood_fit_waic)
 
 
+# LOOIC 5818.5
+
+
+loo_compare(loo_dmg, loo_nodamage)
 
 
 
