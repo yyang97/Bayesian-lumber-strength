@@ -259,5 +259,5 @@ nondmg_loo <- loo(nondmg_fit)
 
 
 # compare LOOIC
-
+## The preferred model will be at the first row. 
 loo_compare(dmg_loo,nondmg_loo)

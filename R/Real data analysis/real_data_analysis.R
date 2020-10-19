@@ -245,6 +245,7 @@ loo_nondamage <- loo(nondmg_fit)
 
 
 ## LOOIC comparison between damage model and nondamage model
+## The preferred model will be at the first row. 
 loo_compare(loo_dmg, loo_nondamage)
 
 
