@@ -5,32 +5,6 @@ require(rstan)
 require(MASS)
 install.packages("jsonlite", type = "source")
 
-#load("real_data_analysis.RData")
-
-##-------------convert log to sqrt-------------###
-# load("all_data_one_model.RData")
-# id <- which(R20_data[,3] == 0)
-# R20_data[id,2] <- sqrt(exp(R20_data[id,2]))
-# 
-# id <- which(R40_data[,3] == 0)
-# R40_data[id,2] <- sqrt(exp(R40_data[id,2]))
-# 
-# id <- which(R60_data[,3] == 0)
-# R60_data[id,2] <- sqrt(exp(R60_data[id,2]))
-# 
-# 
-# id <- which(T20_data[,3] == 1)
-# T20_data[id,1] <- sqrt(exp(T20_data[id,1]))
-# 
-# 
-# id <- which(T40_data[,3] == 1)
-# T40_data[id,1] <- sqrt(exp(T40_data[id,1]))
-# 
-# 
-# id <- which(T60_data[,3] == 1)
-# T60_data[id,1] <- sqrt(exp(T60_data[id,1]))
-# 
-# T100_data <- sqrt(exp(T100_data))
 
 ###------------------data preprocessing--------------
 library(readxl)
@@ -57,25 +31,25 @@ R100_data
 ##-----------------T substitute NA to 0 -----------
 
 id <- T60_data$Broken == 1
-T60_data$MOR[id] = 0
-T60_data$UTS[id] = as.numeric(T60_data$UTS[id])
-T60_data$UTS[!id] = 0
+T60_data$MOR[id] <- 0
+T60_data$UTS[id] <- as.numeric(T60_data$UTS[id])
+T60_data$UTS[!id] <- 0
 T60_data$UTS <- as.numeric(T60_data$UTS)
 T60_data$MOR <- as.numeric(T60_data$MOR)
 
 
 id <- T40_data$Broken == 1
-T40_data$MOR[id] = 0
-T40_data$UTS[id] = as.numeric(T40_data$UTS[id])
-T40_data$UTS[!id] = 0
+T40_data$MOR[id] <- 0
+T40_data$UTS[id] <- as.numeric(T40_data$UTS[id])
+T40_data$UTS[!id] <- 0
 T40_data$UTS <- as.numeric(T40_data$UTS)
 T40_data$MOR <- as.numeric(T40_data$MOR)
 
 
 id <- T20_data$Broken == 1
-T20_data$MOR[id] = 0
-T20_data$UTS[id] = as.numeric(T20_data$UTS[id])
-T20_data$UTS[!id] = 0
+T20_data$MOR[id] <- 0
+T20_data$UTS[id] <- as.numeric(T20_data$UTS[id])
+T20_data$UTS[!id] <- 0
 T20_data$UTS <- as.numeric(T20_data$UTS)
 T20_data$MOR <- as.numeric(T20_data$MOR)
 
@@ -84,25 +58,25 @@ T20_data$MOR <- as.numeric(T20_data$MOR)
 ##-----------------R substitute NA to 0 ------
 
 id <- R60_data$Broken == 0
-R60_data$MOR[id] = 0
-R60_data$UTS[id] = as.numeric(R60_data$UTS[id])
-R60_data$UTS[!id] = 0
+R60_data$MOR[id] <- 0
+R60_data$UTS[id] <- as.numeric(R60_data$UTS[id])
+R60_data$UTS[!id] <- 0
 R60_data$UTS <- as.numeric(R60_data$UTS)
 R60_data$MOR <- as.numeric(R60_data$MOR)
 
 
 
 id <- R40_data$Broken == 0
-R40_data$MOR[id] = 0
-R40_data$UTS[id] = as.numeric(R40_data$UTS[id])
-R40_data$UTS[!id] = 0
+R40_data$MOR[id] <- 0
+R40_data$UTS[id] <- as.numeric(R40_data$UTS[id])
+R40_data$UTS[!id] <- 0
 R40_data$UTS <- as.numeric(R40_data$UTS)
 R40_data$MOR <- as.numeric(R40_data$MOR)
 
 id <- R20_data$Broken == 0
-R20_data$MOR[id] = 0
-R20_data$UTS[id] = as.numeric(R20_data$UTS[id])
-R20_data$UTS[!id] = 0
+R20_data$MOR[id] <- 0
+R20_data$UTS[id] <- as.numeric(R20_data$UTS[id])
+R20_data$UTS[!id] <- 0
 R20_data$UTS <- as.numeric(R20_data$UTS)
 R20_data$MOR <- as.numeric(R20_data$MOR)
 
@@ -213,16 +187,21 @@ T20_data <- cbind(T20_data$UTS,T20_data$MOR,T20_data$Broken)
 T40_data <- cbind(T40_data$UTS,T40_data$MOR,T40_data$Broken)
 T60_data <- cbind(T60_data$UTS,T60_data$MOR,T60_data$Broken)
 
+
+
+##------data preprocessing completed -----
+
+
 ##------ Stan for all alpha-------------
 setwd("F:/study/Research/Bayesian-lumber-strength/R/Real data analysis")
-suppressMessages(dmg_mod_R <- stan_model("damage_combined.stan"))
+dmg_mod <- stan_model("damage.stan")
 
-initf_dmg <- function() {
+init_dmg <- function() {
   list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R20 = 1,
        alpha_R40 = 1,alpha_R60 = 1,alpha_T20 = 1,alpha_T40 =1,alpha_R60 = 1 )
 }
 
-dmg_fit_real <- sampling(object = dmg_mod_R,
+dmg_fit <- sampling(object = dmg_mod,
                          data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
                                      N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
                                      N_x = length(T100_data),N_y = length(R100_data),
@@ -231,26 +210,24 @@ dmg_fit_real <- sampling(object = dmg_mod_R,
                                      t_x = R100_data,t_y = T100_data,
                                      l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
                                      l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
-                         control = list(adapt_delta = 0.8),init = initf_dmg)
+                         control = list(adapt_delta = 0.8),init = init_dmg)
 
-print(dmg_fit_waic,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
+print(dmg_fit,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
                             'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
 
 
-pairs(dmg_fit_waic,pars = c('rho','alpha_R20','alpha_R40',
+pairs(dmg_fit,pars = c('rho','alpha_R20','alpha_R40',
                             'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
 
-pairs((extract(dmg_fit_waic)))
 
-
-loo_dmg <- loo(dmg_fit_real)
+loo_dmg <- loo(dmg_fit)
 ##-------without alpha---------
 
-wood_mod_waic <- stan_model("wood_combined.stan")
-initf_nondmg <- function() {
+nondmg_mod <- stan_model("nondamage.stan")
+init_nondmg <- function() {
   list(mu = c(35,8), sigma = c(10,1), rho = .5)
 }
-wood_fit_waic <- sampling(object = wood_mod_waic,
+nondmg_fit <- sampling(object = nondmg_mod,
                           data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
                                       N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
                                       N_x = length(T100_data),N_y = length(R100_data),
@@ -259,764 +236,327 @@ wood_fit_waic <- sampling(object = wood_mod_waic,
                                       t_x = R100_data,t_y = T100_data,
                                       l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
                                       l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
-                          control = list(adapt_delta = 0.8),init = initf_nondmg)
-print(wood_fit_waic,pars = c('mu','sigma','rho'))
+                          control = list(adapt_delta = 0.8),init = init_nondmg)
+print(nondmg_fit,pars = c('mu','sigma','rho'))
 
 # LOOIC
 
-loo_nodamage <- loo(wood_fit_waic)
+loo_nondamage <- loo(nondmg_fit)
 
 
-# LOOIC 5818.5
+## LOOIC comparison between damage model and nondamage model
+loo_compare(loo_dmg, loo_nondamage)
 
 
-loo_compare(loo_dmg, loo_nodamage)
+##---------------Posterior predictive checks------------------------####
 
+# 1000 repetitions
+t_10 <- rep(0,1000)
+t_50 <- rep(0,1000)
+t_90 <- rep(0,1000)
 
 
-##----------------- Stan for R20------------
+N = 87
 
-R20_data <- cbind(R20_data$MOR,R20_data$UTS,R20_data$Broken)
-R20_data <- R20_data[-48,]
-#R20_data[,1] < R_pf[1]
 
-
-dmg_mod <- stan_model("damage.stan")
-dmg_fit_R20 <- sampling(object = dmg_mod,
-                    data = list(N_SPLD = nrow(R20_data),N_x = length(R100_data),
-                                N_y = length(T100_data),
-                                X = R20_data,t_x = R100_data,t_y = T100_data,
-                                l=R_pf[1]),
-                    control = list(adapt_delta = 0.8))
-
-print(dmg_fit_R20)
-theta <- c('mu','sigma','rho','alpha')
-pairs(dmg_fit_20,pars = theta)
-
-
-
-cor(extract(dmg_fit_R20)$'rho',extract(dmg_fit_R20)$'alpha')
-
-
-for(j in 1:1000){
-  N = 87
-  mu_x <- extract(dmg_fit_R20)$'mu'[j+3000,1]
-  sd_x <- extract(dmg_fit_R20)$'sigma'[j+3000,1]
-  mu_y <- extract(dmg_fit_R20)$'mu'[j+3000,2]
-  sd_y <- extract(dmg_fit_R20)$'sigma'[j+3000,2]
-  rho <- extract(dmg_fit_R20)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R20)$'alpha'[j+3000]
-  mu <- c(mu_x,mu_y)
-  sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
-  bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
-  colnames(bvn1) <- c("bvn1_X","bvn1_Y")
-  samples <- bvn1
-  
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
-  for (i in 1:nrow(PFY_ob_rep)){
-    if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
-    }
-    else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
-    }
-  }
-  PFY_y_rep = samples[(pp*N+1):N,2]
-  
-  # damage data
-  
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
-  
-  quantile(PFY_dmg_rep[id_y_rep,2],.5)
-  
-  t_min[j] <- min(PFY_dmg_rep[id_y_rep,2])
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_max[j] <- max(PFY_dmg_rep[id_y_rep,2])
-  t_sd[j] <- sd(PFY_dmg_rep[id_y_rep,2])
-  
-}
-
-id_y <- which(R20_data[,3] == 0)
-par(mfrow = c(2,2))
-hist(t_min)
-abline(v = min(R20_data[id_y,2]),col = 'red')
-hist(t_mean)
-abline(v = mean(R20_data[id_y,2]),col = 'red')
-hist(t_max)
-abline(v = max(R20_data[id_y,2]),col = 'red')
-hist(t_sd)
-abline(v = sd(R20_data[id_y,2]),col = 'red')
-
-
-
-
-##----------------- Stan for R40------------
-
-R40_data <- cbind(R40_data$MOR,R40_data$UTS,R40_data$Broken)
-R20_data <- R20_data[-48,]
-#R40_data[,1] < R_pf[2]
-
-
-dmg_mod <- stan_model("damage.stan")
-dmg_fit_R40 <- sampling(object = dmg_mod,
-                    data = list(N_SPLD = nrow(R40_data),N_x = length(R100_data),
-                                N_y = length(T100_data),
-                                X = R40_data,t_x = R100_data,t_y = T100_data,
-                                l=R_pf[2]),
-                    control = list(adapt_delta = 0.8))
-
-print(dmg_fit_R40)
-theta <- c('mu','sigma','rho','alpha')
-pairs(dmg_fit_R40,pars = theta)
-pairs(dmg_fit_R40,pars = c('rho','alpha'))
-
-
-
-
-for(j in 1:1000){
-  N = 87
-  mu_x <- extract(dmg_fit_R40)$'mu'[j+3000,1]
-  sd_x <- extract(dmg_fit_R40)$'sigma'[j+3000,1]
-  mu_y <- extract(dmg_fit_R40)$'mu'[j+3000,2]
-  sd_y <- extract(dmg_fit_R40)$'sigma'[j+3000,2]
-  rho <- extract(dmg_fit_R40)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R40)$'alpha'[j+3000]
-  mu <- c(mu_x,mu_y)
-  sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
-  bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
-  colnames(bvn1) <- c("bvn1_X","bvn1_Y")
-  samples <- bvn1
-  
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
-  for (i in 1:nrow(PFY_ob_rep)){
-    if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
-    }
-    else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
-    }
-  }
-  PFY_y_rep = samples[(pp*N+1):N,2]
-  
-  # damage data
-  
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
-  
-  quantile(PFY_dmg_rep[id_y_rep,2],.5)
-  
-  t_min[j] <- min(PFY_dmg_rep[id_y_rep,2])
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_max[j] <- max(PFY_dmg_rep[id_y_rep,2])
-  t_sd[j] <- sd(PFY_dmg_rep[id_y_rep,2])
-  
-}
-
-id_y <- which(R40_data[,3] == 0)
-par(mfrow = c(2,2))
-hist(t_min)
-abline(v = min(R40_data[id_y,2]),col = 'red')
-hist(t_mean)
-abline(v = mean(R40_data[id_y,2]),col = 'red')
-hist(t_max)
-abline(v = max(R40_data[id_y,2]),col = 'red')
-hist(t_sd)
-abline(v = sd(R40_data[id_y,2]),col = 'red')
-##----------------- Stan for R40------------
-
-R60_data <- cbind(R60_data$MOR,R60_data$UTS,R60_data$Broken)
-R60_data <- R60_data[-which((R60_data[,1] < R_pf[3]) == F),]
-
-
-
-dmg_mod <- stan_model("damage.stan")
-dmg_fit_R60 <- sampling(object = dmg_mod,
-                    data = list(N_SPLD = nrow(R60_data),N_x = length(R100_data),
-                                N_y = length(T100_data),
-                                X = R60_data,t_x = R100_data,t_y = T100_data,
-                                l=R_pf[3]),
-                    control = list(adapt_delta = 0.8))
-
-print(dmg_fit_R60)
-theta <- c('mu','sigma','rho','alpha')
-pairs(dmg_fit_R60,pars = theta)
-
-pairs(dmg_fit_R60,pars = c('rho','alpha'))
-
-for(j in 1:1000){
-  N = 87
-  mu_x <- extract(dmg_fit_R60)$'mu'[j+3000,1]
-  sd_x <- extract(dmg_fit_R60)$'sigma'[j+3000,1]
-  mu_y <- extract(dmg_fit_R60)$'mu'[j+3000,2]
-  sd_y <- extract(dmg_fit_R60)$'sigma'[j+3000,2]
-  rho <- extract(dmg_fit_R60)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R60)$'alpha'[j+3000]
-  mu <- c(mu_x,mu_y)
-  sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
-  bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
-  colnames(bvn1) <- c("bvn1_X","bvn1_Y")
-  samples <- bvn1
-  
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
-  for (i in 1:nrow(PFY_ob_rep)){
-    if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
-    }
-    else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
-    }
-  }
-  PFY_y_rep = samples[(pp*N+1):N,2]
-  
-  # damage data
-  
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
-  
-  quantile(PFY_dmg_rep[id_y_rep,2],.5)
-  
-  t_min[j] <- min(PFY_dmg_rep[id_y_rep,2])
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_max[j] <- max(PFY_dmg_rep[id_y_rep,2])
-  t_sd[j] <- sd(PFY_dmg_rep[id_y_rep,2])
-  
-}
-
-id_y <- which(R60_data[,3] == 0)
-par(mfrow = c(2,2))
-hist(t_min)
-abline(v = min(R60_data[id_y,2]),col = 'red')
-hist(t_mean)
-abline(v = mean(R60_data[id_y,2]),col = 'red')
-hist(t_max)
-abline(v = max(R60_data[id_y,2]),col = 'red')
-hist(t_sd)
-abline(v = sd(R60_data[id_y,2]),col = 'red')
-##--------------------Stan T20---------------
-# T20
-T20_data <- cbind(T20_data$UTS,T20_data$MOR,T20_data$Broken)
-T20_data <- T20_data[-74,] 
-#T20_data[,1] < sqrt(T_pf[1])
-
-
-wood_mod <- stan_model("wood.stan")
-wood_fit <- sampling(object = wood_mod,
-                     data = list(N_SPLD = nrow(T20_data),N_x = length(T100_data),
-                                 N_y = length(R100_data),
-                                 X = T20_data,t_x = T100_data,t_y = R100_data,
-                                 l=T_pf[1]),
-                     control = list(adapt_delta = 0.8))
-
-print(wood_fit)
-pairs(wood_fit)
-
-
-
-
-for(j in 1:1000){
-  N = 87
-  mu_x <- extract(wood_fit)$'mu'[j+3000,1]
-  sd_x <- extract(wood_fit)$'sigma'[j+3000,1]
-  mu_y <- extract(wood_fit)$'mu'[j+3000,2]
-  sd_y <- extract(wood_fit)$'sigma'[j+3000,2]
-  rho <- extract(wood_fit)$'rho'[j+3000]
-  mu <- c(mu_x,mu_y)
-  sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
-  bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
-  colnames(bvn1) <- c("bvn1_X","bvn1_Y")
-  samples <- bvn1
-  
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
-  for (i in 1:nrow(PFY_ob_rep)){
-    if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
-    }
-    else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
-    }
-  }
-  PFY_y_rep = samples[(pp*N+1):N,2]
-  
-  # damage data
-  
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-
-  t_min[j] <- min(PFY_ob_rep[id_y_rep,2])
-  t_mean[j] <- mean(PFY_ob_rep[id_y_rep,2])
-  t_max[j] <- max(PFY_ob_rep[id_y_rep,2])
-  t_sd[j] <- sd(PFY_ob_rep[id_y_rep,2])
-  
-}
-
-id_y <- which(T20_data[,3] == 0)
-par(mfrow = c(2,2))
-hist(t_min)
-abline(v = min(T20_data[id_y,2]),col = 'red')
-hist(t_mean)
-abline(v = mean(T20_data[id_y,2]),col = 'red')
-hist(t_max)
-abline(v = max(T20_data[id_y,2]),col = 'red')
-hist(t_sd)
-abline(v = sd(T20_data[id_y,2]),col = 'red')
-
-
-
-
-dmg_fit_T20 <- sampling(object = dmg_mod,
-                     data = list(N_SPLD = nrow(T20_data),N_x = length(T100_data),
-                                 N_y = length(R100_data),
-                                 X = T20_data,t_x = T100_data,t_y = R100_data,
-                                 l=T_pf[1]),
-                     control = list(adapt_delta = 0.99))
-
-print(dmg_fit_T20)
-
-
-# T 40
-T40_data <- cbind(T40_data$UTS,T40_data$MOR,T40_data$Broken)
-T40_data <- T40_data[-81,] 
-#T40_data[,1] < (T_pf[2])
-
-dmg_fit_T40 <- sampling(object = dmg_mod,
-                     data = list(N_SPLD = nrow(T40_data),N_x = length(T100_data),
-                                 N_y = length(R100_data),
-                                 X = T40_data,t_x = T100_data,t_y = R100_data,
-                                 l=T_pf[2]),
-                     control = list(adapt_delta = 0.99))
-
-print(dmg_fit_T40)
-
-
-
-
-# T 60
-T60_data <- cbind(T60_data$UTS,T60_data$MOR,T60_data$Broken)
-T60_data <- T60_data[-(20:21),] 
-# T60_data[,1] < T_pf[3]
-
-dmg_fit_T60 <- sampling(object = dmg_mod,
-                        data = list(N_SPLD = nrow(T60_data),N_x = length(T100_data),
-                                    N_y = length(R100_data),
-                                    X = T60_data,t_x = T100_data,t_y = R100_data,
-                                    l=T_pf[3]),
-                        control = list(adapt_delta = 0.99))
-
-print(dmg_fit_T60)
-
-
-
-
-
-##--------------------R20 R40 R60--------------------############
-
-dmg_mod_R <- stan_model("damage_combined.stan")
-
-dmg_fit_R <- sampling(object = dmg_mod_R,
-                        data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
-                                    N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
-                                    N_x = length(T100_data),N_y = length(R100_data),
-                                    X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
-                                    X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
-                                    t_x = R100_data,t_y = T100_data,
-                                    l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
-                                    l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
-                        control = list(adapt_delta = 0.8))
-print(dmg_fit_R)
-
-
-
-alpha = c('alpha_R20','alpha_R40','alpha_R60','alpha_T20','alpha_T40','alpha_T60')
-traceplot(dmg_fit_R,pars = alpha)
-pairs(dmg_fit_R,pars =c ('rho',alpha))
-
-
-
-
-
-
-##-----------------no constraint--------######
-
-
-load("all_data_one_model.RData")
-
-print(dmg_fit_R)
+extract_mu <- extract(nondmg_fit)$'mu'[3001:4000,]
+extract_sigma <- extract(nondmg_fit)$'sigma'[3001:4000,]
+extract_rho <- extract(nondmg_fit)$'rho'[3001:4000]
 
 
 # R20
 
-t_10 <- rep(1000,0)
-t_mean <- rep(1000,0)
-t_90 <- rep(1000,0)
-t_50 <- rep(1000,0)
+t_10_R20 <- rep(0,1000)
+t_50_R20 <- rep(0,1000)
+t_90_R20 <- rep(0,1000)
 
-N = 87
 
 for(j in 1:1000){
   
-  mu_x <- extract(dmg_fit_R)$'mu'[j+3000,1]
-  sd_x <- extract(dmg_fit_R)$'sigma'[j+3000,1]
-  mu_y <- extract(dmg_fit_R)$'mu'[j+3000,2]
-  sd_y <- extract(dmg_fit_R)$'sigma'[j+3000,2]
-  rho <- extract(dmg_fit_R)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R)$'alpha_R20'[j+3000]
-  # mu_x = 6.48
-  # sd_x = 1.85
-  # mu_y = 1.43
-  # sd_y = 0.4
-  # rho = 0.2
-  # alpha = 0.3
+  mu_x <- extract_mu[j,1]
+  sd_x <- extract_sigma[j,1]
+  mu_y <- extract_mu[j,2]
+  sd_y <- extract_sigma[j,2]
+  rho <- extract_rho[j]
   mu <- c(mu_x,mu_y)
   sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
   bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
   colnames(bvn1) <- c("bvn1_X","bvn1_Y")
   samples <- bvn1
   
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
+  pp <- 0.2
+  l <- quantile(samples[1:(pp*N),1],0.2)[[1]]
+  PFY_ob_rep <- matrix(0, nrow = pp*N, ncol = 3)
   for (i in 1:nrow(PFY_ob_rep)){
     if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
+      PFY_ob_rep[i,1] <- samples[i,1]
+      PFY_ob_rep[i,3] <- 1
     }
     else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
+      PFY_ob_rep[i,2] <- samples[i,2]
+      PFY_ob_rep[i,3] <- 0
     }
   }
-  PFY_y_rep = samples[(pp*N+1):N,2]
+  PFY_y_rep <- samples[(pp*N+1):N,2]
   
   # damage data
   
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
+  id_y_rep <- which(PFY_ob_rep[,3] == 0)
   
   
-  t_10[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.1)
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_90[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.9)
-  t_50[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.5)
+  
+  t_10_R20[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.1)
+  t_90_R20[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.9)
+  t_50_R20[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.5)
   
 }
 
 
 id_y <- which(R20_data[,3] == 0)
 par(mfrow = c(2,2))
-hist(t_10)
+hist(t_10_R20)
 abline(v = quantile(R20_data[id_y,2],0.1),col = 'red')
-hist(t_mean)
-abline(v = mean(R20_data[id_y,2]),col = 'red')
-hist(t_90)
-abline(v = quantile(R20_data[id_y,2],0.9),col = 'red')
-hist(t_50)
+hist(t_50_R20)
 abline(v = quantile(R20_data[id_y,2],0.5),col = 'red')
+hist(t_90_R20)
+abline(v = quantile(R20_data[id_y,2],0.9),col = 'red')
 
 
-p_10 <-  mean(quantile(R20_data[id_y,2],0.1)<t_10)
-p_mean <-  mean(mean(R20_data[id_y,2])<t_mean)
-p_90 <-  mean(quantile(R20_data[id_y,2],0.9)<t_90)
-p_50 <- mean(quantile(R20_data[id_y,2],0.5)<t_50)
 
-p_10
-p_mean
-p_90
-p_50
+p_10_R20 <-  mean(quantile(R20_data[id_y,2],0.1)<t_10_R20)
+p_50_R20 <- mean(quantile(R20_data[id_y,2],0.5)<t_50_R20)
+p_90_R20 <-  mean(quantile(R20_data[id_y,2],0.9)<t_90_R20)
 
-##----R40------
+
+
+# R40
+
+t_10_R40 <- rep(0,1000)
+t_50_R40 <- rep(0,1000)
+t_90_R40 <- rep(0,1000)
 
 for(j in 1:1000){
   
-  mu_x <- extract(dmg_fit_R)$'mu'[j+3000,1]
-  sd_x <- extract(dmg_fit_R)$'sigma'[j+3000,1]
-  mu_y <- extract(dmg_fit_R)$'mu'[j+3000,2]
-  sd_y <- extract(dmg_fit_R)$'sigma'[j+3000,2]
-  rho <- extract(dmg_fit_R)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R)$'alpha_R40'[j+3000]
-  # mu_x = 6.48
-  # sd_x = 1.85
-  # mu_y = 1.43
-  # sd_y = 0.4
-  # rho = 0.2
-  # alpha = 0.3
+  mu_x <- extract_mu[j,1]
+  sd_x <- extract_sigma[j,1]
+  mu_y <- extract_mu[j,2]
+  sd_y <- extract_sigma[j,2]
+  rho <- extract_rho[j]
   mu <- c(mu_x,mu_y)
   sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
   bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
   colnames(bvn1) <- c("bvn1_X","bvn1_Y")
   samples <- bvn1
   
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
+  pp <- 0.4
+  l <- quantile(samples[1:(pp*N),1],0.4)[[1]]
+  PFY_ob_rep <- matrix(0, nrow = pp*N, ncol = 3)
   for (i in 1:nrow(PFY_ob_rep)){
     if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
+      PFY_ob_rep[i,1] <- samples[i,1]
+      PFY_ob_rep[i,3] <- 1
     }
     else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
+      PFY_ob_rep[i,2] <- samples[i,2]
+      PFY_ob_rep[i,3] <- 0
     }
   }
-  PFY_y_rep = samples[(pp*N+1):N,2]
+  PFY_y_rep <- samples[(pp*N+1):N,2]
   
   # damage data
   
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
+  id_y_rep <- which(PFY_ob_rep[,3] == 0)
   
   
-  t_10[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.1)
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_90[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.9)
-  t_50[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.5)
+  
+  t_10_R40[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.1)
+  t_90_R40[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.9)
+  t_50_R40[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.5)
   
 }
 
 
-id_y <- which(R40_data[,3] == 0)
+
 par(mfrow = c(2,2))
-hist(t_10)
+id_y <- which(R40_data[,3] == 0)
+hist(t_10_R40)
 abline(v = quantile(R40_data[id_y,2],0.1),col = 'red')
-hist(t_mean)
-abline(v = mean(R40_data[id_y,2]),col = 'red')
-hist(t_90)
-abline(v = quantile(R40_data[id_y,2],0.9),col = 'red')
-hist(t_50)
+hist(t_50_R40)
 abline(v = quantile(R40_data[id_y,2],0.5),col = 'red')
+hist(t_90_R40)
+abline(v = quantile(R40_data[id_y,2],0.9),col = 'red')
 
 
-p_10 <-  mean(quantile(R40_data[id_y,2],0.1)<t_10)
-p_mean <-  mean(mean(R40_data[id_y,2])<t_mean)
-p_90 <-  mean(quantile(R40_data[id_y,2],0.9)<t_90)
-p_50 <- mean(quantile(R40_data[id_y,2],0.5)<t_50)
 
-p_10
-p_mean
-p_90
-p_50
+p_10_R40 <-  mean(quantile(R40_data[id_y,2],0.1)<t_10_R40)
+p_50_R40 <- mean(quantile(R40_data[id_y,2],0.5)<t_50_R40)
+p_90_R40 <-  mean(quantile(R40_data[id_y,2],0.9)<t_90_R40)
 
-#######-------R60----------######
+
+
+
+
+
+# R60
+
+t_10_R60 <- rep(0,1000)
+t_50_R60 <- rep(0,1000)
+t_90_R60 <- rep(0,1000)
 
 for(j in 1:1000){
   
-  mu_x <- extract(dmg_fit_R)$'mu'[j+3000,1]
-  sd_x <- extract(dmg_fit_R)$'sigma'[j+3000,1]
-  mu_y <- extract(dmg_fit_R)$'mu'[j+3000,2]
-  sd_y <- extract(dmg_fit_R)$'sigma'[j+3000,2]
-  rho <- extract(dmg_fit_R)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R)$'alpha_R60'[j+3000]
-  # mu_x = 6.48
-  # sd_x = 1.85
-  # mu_y = 1.43
-  # sd_y = 0.4
-  # rho = 0.2
-  # alpha = 0.3
+  mu_x <- extract_mu[j,1]
+  sd_x <- extract_sigma[j,1]
+  mu_y <- extract_mu[j,2]
+  sd_y <- extract_sigma[j,2]
+  rho <- extract_rho[j]
   mu <- c(mu_x,mu_y)
   sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
   bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
   colnames(bvn1) <- c("bvn1_X","bvn1_Y")
   samples <- bvn1
   
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
+  pp <- 0.6
+  l <- quantile(samples[1:(pp*N),1],0.6)[[1]]
+  PFY_ob_rep <- matrix(0, nrow = pp*N, ncol = 3)
   for (i in 1:nrow(PFY_ob_rep)){
     if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
+      PFY_ob_rep[i,1] <- samples[i,1]
+      PFY_ob_rep[i,3] <- 1
     }
     else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
+      PFY_ob_rep[i,2] <- samples[i,2]
+      PFY_ob_rep[i,3] <- 0
     }
   }
-  PFY_y_rep = samples[(pp*N+1):N,2]
+  PFY_y_rep <- samples[(pp*N+1):N,2]
   
   # damage data
   
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
+  id_y_rep <- which(PFY_ob_rep[,3] == 0)
   
   
-  t_10[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.1)
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_90[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.9)
-  t_50[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.5)
+  
+  t_10_R60[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.1)
+  t_90_R60[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.9)
+  t_50_R60[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.5)
   
 }
 
+
+par(mfrow = c(2,2))
 
 id_y <- which(R60_data[,3] == 0)
-par(mfrow = c(2,2))
-hist(t_10)
+hist(t_10_R60)
 abline(v = quantile(R60_data[id_y,2],0.1),col = 'red')
-hist(t_mean)
-abline(v = mean(R60_data[id_y,2]),col = 'red')
-hist(t_90)
-abline(v = quantile(R60_data[id_y,2],0.9),col = 'red')
-hist(t_50)
+hist(t_50_R60)
 abline(v = quantile(R60_data[id_y,2],0.5),col = 'red')
+hist(t_90_R60)
+abline(v = quantile(R60_data[id_y,2],0.9),col = 'red')
 
 
-p_10 <-  mean(quantile(R60_data[id_y,2],0.1)<t_10)
-p_mean <-  mean(mean(R60_data[id_y,2])<t_mean)
-p_90 <-  mean(quantile(R60_data[id_y,2],0.9)<t_90)
-p_50 <- mean(quantile(R60_data[id_y,2],0.5)<t_50)
+
+p_10_R60 <-  mean(quantile(R60_data[id_y,2],0.1)<t_10_R60)
+p_50_R60 <- mean(quantile(R60_data[id_y,2],0.5)<t_50_R60)
+p_90_R60 <-  mean(quantile(R60_data[id_y,2],0.9)<t_90_R60)
 
 
-p_10
-p_mean
-p_90
-p_50
-#####-------T20------######
 
+
+# T20
+
+t_10_T20 <- rep(0,1000)
+t_50_T20 <- rep(0,1000)
+t_90_T20 <- rep(0,1000)
 
 for(j in 1:1000){
   
-  mu_x <- extract(dmg_fit_R)$'mu'[j+3000,2]
-  sd_x <- extract(dmg_fit_R)$'sigma'[j+3000,2]
-  mu_y <- extract(dmg_fit_R)$'mu'[j+3000,1]
-  sd_y <- extract(dmg_fit_R)$'sigma'[j+3000,1]
-  rho <- extract(dmg_fit_R)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R)$'alpha_T20'[j+3000]
-  # mu_x = 6.48
-  # sd_x = 1.85
-  # mu_y = 1.43
-  # sd_y = 0.4
-  # rho = 0.2
-  # alpha = 0.3
+  mu_x <- extract_mu[j,2]
+  sd_x <- extract_sigma[j,2]
+  mu_y <- extract_mu[j,1]
+  sd_y <- extract_sigma[j,1]
+  rho <- extract_rho[j]
   mu <- c(mu_x,mu_y)
   sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
   bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
   colnames(bvn1) <- c("bvn1_X","bvn1_Y")
   samples <- bvn1
   
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
+  pp <- 0.2
+  l <- quantile(samples[1:(pp*N),1],0.2)[[1]]
+  PFY_ob_rep <- matrix(0, nrow = pp*N, ncol = 3)
   for (i in 1:nrow(PFY_ob_rep)){
     if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
+      PFY_ob_rep[i,1] <- samples[i,1]
+      PFY_ob_rep[i,3] <- 1
     }
     else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
+      PFY_ob_rep[i,2] <- samples[i,2]
+      PFY_ob_rep[i,3] <- 0
     }
   }
-  PFY_y_rep = samples[(pp*N+1):N,2]
+  PFY_y_rep <- samples[(pp*N+1):N,2]
   
   # damage data
   
   id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
   
   
-  t_10[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.1)
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_90[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.9)
-  t_50[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.5)
+  
+  t_10_T20[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.1)
+  t_90_T20[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.9)
+  t_50_T20[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.5)
   
 }
 
 
 id_y <- which(T20_data[,3] == 0)
 par(mfrow = c(2,2))
-hist(t_10)
+hist(t_10_T20)
 abline(v = quantile(T20_data[id_y,2],0.1),col = 'red')
-hist(t_mean)
-abline(v = mean(T20_data[id_y,2]),col = 'red')
-hist(t_90)
-abline(v = quantile(T20_data[id_y,2],0.9),col = 'red')
-hist(t_50)
+hist(t_50_T20)
 abline(v = quantile(T20_data[id_y,2],0.5),col = 'red')
+hist(t_90_T20)
+abline(v = quantile(T20_data[id_y,2],0.9),col = 'red')
 
 
-p_10 <-  mean(quantile(T20_data[id_y,2],0.1)<t_10)
-p_mean <-  mean(mean(T20_data[id_y,2])<t_mean)
-p_90 <-  mean(quantile(T20_data[id_y,2],0.9)<t_90)
-p_50 <- mean(quantile(T20_data[id_y,2],0.5)<t_50)
+
+p_10_T20 <-  mean(quantile(T20_data[id_y,2],0.1)<t_10_T20)
+p_50_T20 <- mean(quantile(T20_data[id_y,2],0.5)<t_50_T20)
+p_90_T20 <-  mean(quantile(T20_data[id_y,2],0.9)<t_90_T20)
 
 
-p_10
-p_mean
-p_90
-p_50
+# T40
 
-##----------T40-------######
-
-
+t_10_T40 <- rep(0,1000)
+t_50_T40 <- rep(0,1000)
+t_90_T40 <- rep(0,1000)
 
 
 for(j in 1:1000){
   
-  mu_x <- extract(dmg_fit_R)$'mu'[j+3000,2]
-  sd_x <- extract(dmg_fit_R)$'sigma'[j+3000,2]
-  mu_y <- extract(dmg_fit_R)$'mu'[j+3000,1]
-  sd_y <- extract(dmg_fit_R)$'sigma'[j+3000,1]
-  rho <- extract(dmg_fit_R)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R)$'alpha_T40'[j+3000]
-  # mu_x = 6.48
-  # sd_x = 1.85
-  # mu_y = 1.43
-  # sd_y = 0.4
-  # rho = 0.2
-  # alpha = 0.3
+  mu_x <- extract_mu[j,2]
+  sd_x <- extract_sigma[j,2]
+  mu_y <- extract_mu[j,1]
+  sd_y <- extract_sigma[j,1]
+  rho <- extract_rho[j]
   mu <- c(mu_x,mu_y)
   sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
   bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
   colnames(bvn1) <- c("bvn1_X","bvn1_Y")
   samples <- bvn1
   
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
+  pp <- 0.4
+  l <- quantile(samples[1:(pp*N),1],0.4)[[1]]
+  PFY_ob_rep <- matrix(0, nrow = pp*N, ncol = 3)
   for (i in 1:nrow(PFY_ob_rep)){
     if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
+      PFY_ob_rep[i,1] <- samples[i,1]
+      PFY_ob_rep[i,3] <- 1
     }
     else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
+      PFY_ob_rep[i,2] <- samples[i,2]
+      PFY_ob_rep[i,3] <- 0
     }
   }
   PFY_y_rep = samples[(pp*N+1):N,2]
@@ -1024,145 +564,150 @@ for(j in 1:1000){
   # damage data
   
   id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
   
   
-  t_10[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.1)
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_90[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.9)
-  t_50[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.5)
+  
+  t_10_T40[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.1)
+  t_90_T40[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.9)
+  t_50_T40[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.5)
   
 }
 
 
 id_y <- which(T40_data[,3] == 0)
 par(mfrow = c(2,2))
-hist(t_10)
+hist(t_10_T40)
 abline(v = quantile(T40_data[id_y,2],0.1),col = 'red')
-hist(t_mean)
-abline(v = mean(T40_data[id_y,2]),col = 'red')
-hist(t_90)
-abline(v = quantile(T40_data[id_y,2],0.9),col = 'red')
-hist(t_50)
+hist(t_50_T40)
 abline(v = quantile(T40_data[id_y,2],0.5),col = 'red')
+hist(t_90_T40)
+abline(v = quantile(T40_data[id_y,2],0.9),col = 'red')
 
 
-p_10 <-  mean(quantile(T40_data[id_y,2],0.1)<t_10)
-p_mean <-  mean(mean(T40_data[id_y,2])<t_mean)
-p_90 <-  mean(quantile(T40_data[id_y,2],0.9)<t_90)
-p_50 <- mean(quantile(T40_data[id_y,2],0.5)<t_50)
+
+p_10_T40 <-  mean(quantile(T40_data[id_y,2],0.1)<t_10_T40)
+p_50_T40 <- mean(quantile(T40_data[id_y,2],0.5)<t_50_T40)
+p_90_T40 <-  mean(quantile(T40_data[id_y,2],0.9)<t_90_T40)
 
 
-p_10
-p_mean
-p_90
-p_50
 
-###-------T60---------######
+# T60
 
+t_10_T60 <- rep(0,1000)
+t_50_T60 <- rep(0,1000)
+t_90_T60 <- rep(0,1000)
 
 
 for(j in 1:1000){
   
-  mu_x <- extract(dmg_fit_R)$'mu'[j+3000,2]
-  sd_x <- extract(dmg_fit_R)$'sigma'[j+3000,2]
-  mu_y <- extract(dmg_fit_R)$'mu'[j+3000,1]
-  sd_y <- extract(dmg_fit_R)$'sigma'[j+3000,1]
-  rho <- extract(dmg_fit_R)$'rho'[j+3000]
-  alpha <- extract(dmg_fit_R)$'alpha_T60'[j+3000]
-  # mu_x = 6.48
-  # sd_x = 1.85
-  # mu_y = 1.43
-  # sd_y = 0.4
-  # rho = 0.2
-  # alpha = 0.3
+  mu_x <- extract_mu[j,2]
+  sd_x <- extract_sigma[j,2]
+  mu_y <- extract_mu[j,1]
+  sd_y <- extract_sigma[j,1]
+  rho <- extract_rho[j]
   mu <- c(mu_x,mu_y)
   sigma <- matrix(c(sd_x^2, sd_x*sd_y*rho, sd_x*sd_y*rho, sd_y^2),2)
   bvn1 <- mvrnorm(N, mu = mu, Sigma = sigma ) # from MASS package
   colnames(bvn1) <- c("bvn1_X","bvn1_Y")
   samples <- bvn1
   
-  pp = 0.6
-  l = quantile(samples[1:(pp*N),1],0.6)[[1]]
-  PFY_ob_rep = matrix(0, nrow = pp*N, ncol = 3)
+  pp <- 0.6
+  l <- quantile(samples[1:(pp*N),1],0.6)[[1]]
+  PFY_ob_rep <- matrix(0, nrow = pp*N, ncol = 3)
   for (i in 1:nrow(PFY_ob_rep)){
     if(samples[i,1] <= l){
-      PFY_ob_rep[i,1] = samples[i,1]
-      PFY_ob_rep[i,3] = 1
+      PFY_ob_rep[i,1] <- samples[i,1]
+      PFY_ob_rep[i,3] <- 1
     }
     else{
-      PFY_ob_rep[i,2] = samples[i,2]
-      PFY_ob_rep[i,3] = 0
+      PFY_ob_rep[i,2] <- samples[i,2]
+      PFY_ob_rep[i,3] <- 0
     }
   }
-  PFY_y_rep = samples[(pp*N+1):N,2]
+  PFY_y_rep <- samples[(pp*N+1):N,2]
   
   # damage data
+  id_y_rep <- which(PFY_ob_rep[,3] == 0)
   
-  id_y_rep = which(PFY_ob_rep[,3] == 0)
-  PFY_dmg_rep = PFY_ob_rep
-  PFY_dmg_rep[id_y_rep,2] = PFY_ob_rep[id_y_rep,2] - alpha/PFY_ob_rep[id_y_rep,2]
-  
-  remove(PFY_ob_rep)
-  
-  
-  t_10[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.1)
-  t_mean[j] <- mean(PFY_dmg_rep[id_y_rep,2])
-  t_90[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.9)
-  t_50[j] <- quantile(PFY_dmg_rep[id_y_rep,2],0.5)
+
+  t_10_T60[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.1)
+  t_90_T60[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.9)
+  t_50_T60[j] <- quantile(PFY_ob_rep[id_y_rep,2],0.5)
   
 }
 
 
 id_y <- which(T60_data[,3] == 0)
 par(mfrow = c(2,2))
-hist(t_10)
+hist(t_10_T60)
 abline(v = quantile(T60_data[id_y,2],0.1),col = 'red')
-hist(t_mean)
-abline(v = mean(T60_data[id_y,2]),col = 'red')
-hist(t_90)
-abline(v = quantile(T60_data[id_y,2],0.9),col = 'red')
-hist(t_50)
+hist(t_50_T60)
 abline(v = quantile(T60_data[id_y,2],0.5),col = 'red')
-
-
-p_10 <-  mean(quantile(T60_data[id_y,2],0.1)<t_10)
-p_mean <-  mean(mean(T60_data[id_y,2])<t_mean)
-p_90 <-  mean(quantile(T60_data[id_y,2],0.9)<t_90)
-p_50 <- mean(quantile(T60_data[id_y,2],0.5)<t_50)
-
-
-p_10
-p_mean
-p_90
-p_50
+hist(t_90_T60)
+abline(v = quantile(T60_data[id_y,2],0.9),col = 'red')
 
 
 
-
-
-##-----------------normal testing for UTS data-------------
-
-T100_data <- exp(T100_data)
-
-
-
-fit <- fitdistr(T100_data, "normal")
-para <- fit$estimate
-hist(T100_data, prob = TRUE)
-curve(dnorm(T100_data, para[1], para[2]), col = 2, add = TRUE)
+p_10_T60 <-  mean(quantile(T60_data[id_y,2],0.1)<t_10_T60)
+p_50_T60 <- mean(quantile(T60_data[id_y,2],0.5)<t_50_T60)
+p_90_T60 <-  mean(quantile(T60_data[id_y,2],0.9)<t_90_T60)
 
 
 
-library(fitdistrplus)
+##--------------plot the PPC for R group------------
 
-FIT <- fitdist(T100_data, "norm")    ## note: it is "norm" not "normal"
-class(FIT)
-# [1] "fitdist"
 
-plot(FIT)    ## use method `plot.fitdist`
-FIT$estimate
-FIT$bic
+par(mfrow = c(3,3))
+id_y <- which(R20_data[,3] == 0)
+hist(t_10_R20,main = "PPC for R20 (1)",xlab = "T(y) = quantile(y,0.1)")
+abline(v = quantile(R20_data[id_y,2],0.1),col = 'red')
+hist(t_50_R20,main = "PPC for R20 (2)",xlab = "T(y) = quantile(y,0.5)")
+abline(v = quantile(R20_data[id_y,2],0.5),col = 'red')
+hist(t_90_R20,main = "PPC for R20 (3)",xlab = "T(y) = quantile(y,0.9)")
+abline(v = quantile(R20_data[id_y,2],0.9),col = 'red')
+
+id_y <- which(R40_data[,3] == 0)
+hist(t_10_R40,main = "PPC for R40 (1)",xlab = "T(y) = quantile(y,0.1)")
+abline(v = quantile(R40_data[id_y,2],0.1),col = 'red')
+hist(t_50_R40,main = "PPC for R40 (2)",xlab = "T(y) = quantile(y,0.5)")
+abline(v = quantile(R40_data[id_y,2],0.5),col = 'red')
+hist(t_90_R40,main = "PPC for R40 (3)",xlab = "T(y) = quantile(y,0.9)")
+abline(v = quantile(R40_data[id_y,2],0.9),col = 'red')
+
+id_y <- which(R60_data[,3] == 0)
+hist(t_10_R60,main = "PPC for R60 (1)",xlab = "T(y) = quantile(y,0.1)")
+abline(v = quantile(R60_data[id_y,2],0.1),col = 'red')
+hist(t_50_R60,main = "PPC for R60 (2)",xlab = "T(y) = quantile(y,0.5)")
+abline(v = quantile(R60_data[id_y,2],0.5),col = 'red')
+hist(t_90_R60,main = "PPC for R60 (3)",xlab = "T(y) = quantile(y,0.9)")
+abline(v = quantile(R60_data[id_y,2],0.9),col = 'red')
+
+
+
+##---------------plot the ppc for T group--------------
+
+par(mfrow = c(3,3))
+id_y <- which(T20_data[,3] == 0)
+hist(t_10_T20,main = "PPC for T20 (1)",xlab = "T(y) = quantile(y,0.1)")
+abline(v = quantile(T20_data[id_y,2],0.1),col = 'red')
+hist(t_50_T20,main = "PPC for T20 (2)",xlab = "T(y) = quantile(y,0.5)")
+abline(v = quantile(T20_data[id_y,2],0.5),col = 'red')
+hist(t_90_T20,main = "PPC for T20 (3)",xlab = "T(y) = quantile(y,0.9)")
+abline(v = quantile(T20_data[id_y,2],0.9),col = 'red')
+
+id_y <- which(T40_data[,3] == 0)
+hist(t_10_T40,main = "PPC for T40 (1)",xlab = "T(y) = quantile(y,0.1)")
+abline(v = quantile(T40_data[id_y,2],0.1),col = 'red')
+hist(t_50_T40,main = "PPC for T40 (2)",xlab = "T(y) = quantile(y,0.5)")
+abline(v = quantile(T40_data[id_y,2],0.5),col = 'red')
+hist(t_90_T40,main = "PPC for T40 (3)",xlab = "T(y) = quantile(y,0.9)")
+abline(v = quantile(T40_data[id_y,2],0.9),col = 'red')
+
+id_y <- which(T60_data[,3] == 0)
+hist(t_10_T60,main = "PPC for T60 (1)",xlab = "T(y) = quantile(y,0.1)")
+abline(v = quantile(T60_data[id_y,2],0.1),col = 'red')
+hist(t_50_T60,main = "PPC for T60 (2)",xlab = "T(y) = quantile(y,0.5)")
+abline(v = quantile(T60_data[id_y,2],0.5),col = 'red')
+hist(t_90_T60,main = "PPC for T60 (3)",xlab = "T(y) = quantile(y,0.9)")
+abline(v = quantile(T60_data[id_y,2],0.9),col = 'red')
+
