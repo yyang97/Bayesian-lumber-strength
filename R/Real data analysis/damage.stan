@@ -83,7 +83,7 @@ data {
 parameters {
   real mu[2];
   real<lower=0> sigma[2];
-  real<lower=0,upper = 1> rho;
+  real<lower=-1,upper = 1> rho;
   real<lower=0> alpha_R20;
   real<lower=0> alpha_R40;
   real<lower=0> alpha_R60;
