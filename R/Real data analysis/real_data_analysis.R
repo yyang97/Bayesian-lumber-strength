@@ -237,6 +237,7 @@ nondmg_fit <- sampling(object = nondmg_mod,
                                       l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
                           control = list(adapt_delta = 0.8),init = init_nondmg)
 print(nondmg_fit,pars = c('mu','sigma','rho'))
+pairs(nondmg_fit,pars = c('mu','sigma','rho'))
 
 # LOOIC
 
@@ -265,11 +266,11 @@ R40dmg_fit <- sampling(object = R40dmg_mod,
                                    l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
                        control = list(adapt_delta = 0.8),init = init_R40dmg)
 print(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
-
+pairs(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
 # LOOIC
 
 loo_R40dmg <- loo(R40dmg_fit)
-
+extract<- extract(R40dmg_fit)$'alpha_R40'
 ##
 loo_compare(loo_R40dmg, loo_nondamage)
 

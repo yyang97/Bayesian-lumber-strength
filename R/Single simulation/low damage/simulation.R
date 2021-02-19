@@ -17,7 +17,7 @@ R_pf <- c(qnorm(0.2,mu[1],sigma[1]), qnorm(0.4,mu[1],sigma[1]),
           qnorm(0.6,mu[1],sigma[1]))
 T_pf <- c(qnorm(0.2,mu[2],sigma[2]),qnorm(0.4,mu[2],sigma[2]),
           qnorm(0.6,mu[2],sigma[2]))
-N <- 100
+N <- 300
 
 
 ##--------------alpha-----#####

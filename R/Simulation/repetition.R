@@ -43,7 +43,7 @@ colnames(cv) <- c('rho','alpha_R20','alpha_R40',
                   'alpha_R60','alpha_T20','alpha_T40','alpha_T60')
 cv <- as.data.frame(cv)
 
-rho_nondmg <- rep(0,rnow(simulation))
+rho_nondmg <- rep(0,nrow(simulation))
 
 for(i in 1:nrow(simulation)){
 ###---------R20---------#####
@@ -268,7 +268,7 @@ T100_data <- rnorm(2*N,mean = mu[2],sd = sigma[2])
 
 ##---------------stan fitting-----------####
 
-dmg_mod <- stan_model("damage.stan")
+#dmg_mod <- stan_model("damage.stan")
 
 init_dmg <- function() {
   list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R20 = 1,
@@ -311,7 +311,7 @@ CI <-  as.numeric(real_par >summary(dmg_fit)[[1]][5:11,4])*
 
 
 ##-----------------------without dmg----------------------
-nondmg_mod <- stan_model("nondamage.stan")
+#nondmg_mod <- stan_model("nondamage.stan")
 init_nondmg <- function() {
   list(mu = c(35,8), sigma = c(10,1), rho = .5)
 }
