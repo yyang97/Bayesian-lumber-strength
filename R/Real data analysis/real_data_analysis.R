@@ -133,8 +133,8 @@ shapiro.test(sqrt(T100_data)) # p-value = 0.3988
 
 
 ##------proof loading-------------- 
-R_pf =c* c(4.956690733, 6.110714122, 7.092435407)
-T_pf =sqrt(c* c(2.962390379, 3.986497991, 4.916102264))
+R_pf <- c* c(4.956690733, 6.110714122, 7.092435407)
+T_pf <- sqrt(c* c(2.962390379, 3.986497991, 4.916102264))
 
 
 ##--------convert UTS to sqrt(UTS)
@@ -273,6 +273,61 @@ loo_R40dmg <- loo(R40dmg_fit)
 extract<- extract(R40dmg_fit)$'alpha_R40'
 ##
 loo_compare(loo_R40dmg, loo_nondamage)
+
+
+
+
+
+
+##-------------------Model 4 let alpha_R40 be real----------------
+R40dmg_mod <- stan_model("only_alphaR40_real.stan")
+init_R40dmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R40 = 1)
+}
+
+
+R40dmg_fit <- sampling(object = R40dmg_mod,
+                       data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                   N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                   N_x = length(T100_data),N_y = length(R100_data),
+                                   X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                   X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                   t_x = R100_data,t_y = T100_data,
+                                   l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                   l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                       control = list(adapt_delta = 0.8),init = init_R40dmg)
+print(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
+pairs(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
+
+
+
+##-------------------Model 5 let all alpha's be real----------------
+dmg_mod <- stan_model("damage_real.stan")
+
+init_dmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R20 = 1,
+       alpha_R40 = 1,alpha_R60 = 1,alpha_T20 = 1,alpha_T40 =1,alpha_R60 = 1 )
+}
+
+dmg_fit <- sampling(object = dmg_mod,
+                    data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                N_x = length(T100_data),N_y = length(R100_data),
+                                X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                t_x = R100_data,t_y = T100_data,
+                                l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                    control = list(adapt_delta = 0.8),init = init_dmg)
+
+print(dmg_fit,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
+                       'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
+
+
+pairs(dmg_fit,pars = c('rho','alpha_R20','alpha_R40',
+                       'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
+
+
 
 ##---------------Posterior predictive checks------------------------####
 

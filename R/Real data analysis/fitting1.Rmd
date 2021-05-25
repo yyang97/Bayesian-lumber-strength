@@ -1,0 +1,118 @@
+---
+title: "fitting1"
+author: "Yunfeng Yang"
+date: "2021/3/30"
+output: pdf_document
+---
+```{r,warning=F,message=F}
+load("fittingwithrestrict.RData")
+require(rstan)
+require(MASS)
+require(loo)
+```
+
+# Model 1, including all the alpha
+
+```{r,eval=F}
+dmg_mod <- stan_model("damage.stan")
+
+init_dmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R20 = 1,
+       alpha_R40 = 1,alpha_R60 = 1,alpha_T20 = 1,alpha_T40 =1,alpha_R60 = 1 )
+}
+set.seed(2020)
+dmg_fit <- sampling(object = dmg_mod,
+                         data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                     N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                     N_x = length(T100_data),N_y = length(R100_data),
+                                     X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                     X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                     t_x = R100_data,t_y = T100_data,
+                                     l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                     l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                         control = list(adapt_delta = 0.8),init = init_dmg)
+```
+
+```{r}
+print(dmg_fit,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
+                            'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
+
+
+pairs(dmg_fit,pars = c('rho','alpha_R20','alpha_R40',
+                            'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
+
+
+loo_dmg <- loo(dmg_fit)
+```
+
+
+# Model 2, without any alpha
+
+```{r, eval=F}
+nondmg_mod <- stan_model("nondamage.stan")
+init_nondmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5)
+}
+nondmg_fit <- sampling(object = nondmg_mod,
+                          data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                      N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                      N_x = length(T100_data),N_y = length(R100_data),
+                                      X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                      X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                      t_x = R100_data,t_y = T100_data,
+                                      l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                      l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                          control = list(adapt_delta = 0.8),init = init_nondmg)
+
+```
+
+
+```{r}
+print(nondmg_fit,pars = c('mu','sigma','rho'))
+pairs(nondmg_fit,pars = c('mu','sigma','rho'))
+
+# LOOIC
+
+loo_nondamage <- loo(nondmg_fit)
+
+
+## LOOIC comparison between damage model and nondamage model
+## The preferred model will be at the first row. 
+loo_compare(loo_dmg, loo_nondamage)
+```
+
+
+# Model 3, only including alpha_R40
+
+```{r,eval=F}
+R40dmg_mod <- stan_model("only_alphaR40.stan")
+init_R40dmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R40 = 1)
+}
+
+
+R40dmg_fit <- sampling(object = R40dmg_mod,
+                       data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                   N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                   N_x = length(T100_data),N_y = length(R100_data),
+                                   X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                   X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                   t_x = R100_data,t_y = T100_data,
+                                   l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                   l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                       control = list(adapt_delta = 0.8),init = init_R40dmg)
+
+```
+
+
+```{r}
+print(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
+pairs(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
+# LOOIC
+
+loo_R40dmg <- loo(R40dmg_fit)
+extract<- extract(R40dmg_fit)$'alpha_R40'
+##
+loo_compare(loo_R40dmg, loo_nondamage)
+```
+
