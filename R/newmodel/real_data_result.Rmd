@@ -1,0 +1,37 @@
+---
+title: "real data results"
+author: "Yunfeng Yang"
+date: "2/10/2022"
+output: html_document
+---
+
+The result is based on moving some outliers to the 100 groups. 
+
+
+```{r}
+lpthresh <- readRDS("lpthresh.rds")
+colnames(lpthresh) <- c("threshold", "lp")
+lpthresh
+```
+So the first row is the threshold I used, which is `seq(.85,.95,.01)`. The second line is the lp value in the server.
+
+
+```{r}
+plot(lpthresh[,1], lpthresh[,2] , type = 'l', xlab = 'threshold', ylab = 'lp')
+```
+
+
+```{r}
+lpthresh[which.max(lpthresh[,2]),]
+```
+
+It tells me `threshold = .89` can maximize the log-posterior. 
+
+
+```{r}
+real_fit <- readRDS("realfit089.rds")
+print(real_fit)
+```
+This is the result I got with `threshold = .89`.
+
+

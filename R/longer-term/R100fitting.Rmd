@@ -1,0 +1,32 @@
+---
+title: "R100fitting"
+author: "Yunfeng Yang"
+date: "2/21/2022"
+output: html_document
+---
+```{r}
+bending <- read.csv("bending-pl.csv", header = T)
+# convert psi to Mpa
+#  1 thousand psi = 6.895 MPa
+bending[,1] <- bending[,1]/1000*6.895
+
+
+R100_data <- bending[bending[,2] == "R100",1]
+R20_data <- bending[bending[,2] == "R20",1]
+R20R100_data <- bending[bending[,2] == "R20R100",1]
+```
+
+
+
+```{r}
+hist(R100_data)
+hist(sqrt(R100_data))
+hist(log(R100_data))
+
+shapiro.test(R100_data)
+shapiro.test(sqrt(R100_data))
+shapiro.test(log((R100_data)))
+```
+
+
+All pvalues < 0.05, indicate that normal is not a good fitting.

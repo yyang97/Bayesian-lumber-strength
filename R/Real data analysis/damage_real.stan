@@ -130,41 +130,41 @@ model {
     }    
 }
 
-// 
-// generated quantities {
-//   vector[N_R20+N_R40+N_R60+N_T20+N_T40+N_T60+N_x+N_y] log_lik;
-//   for (n in 1:N_R20) {
-//     log_lik[n] = 
-//     DmgR_lpdf(X_R20[n,]|l_R20,mu,sigma,rho,alpha_R20);
-//   }
-//   for (n in 1:N_R40) {
-//     log_lik[n+N_R20] = 
-//     DmgR_lpdf(X_R40[n,]|l_R40,mu,sigma,rho,alpha_R40);
-//   }
-//   for (n in 1:N_R60) {
-//     log_lik[n+N_R20+N_R40] =
-//     DmgR_lpdf(X_R60[n,]|l_R60,mu,sigma,rho,alpha_R60);
-//   }
-//   for (n in 1:N_T20) {
-//     log_lik[n+N_R20+N_R40+N_R60] =
-//     DmgT_lpdf(X_T20[n,]|l_T20,mu,sigma,rho,alpha_T20);
-//   }
-//   for (n in 1:N_T40) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20] =
-//     DmgT_lpdf(X_T40[n,]|l_T40,mu,sigma,rho,alpha_T40);
-//   }
-//   for (n in 1:N_T60) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40] =
-//     DmgT_lpdf(X_T60[n,]|l_T60,mu,sigma,rho,alpha_T60);
-//   }
-//   for (n in 1:N_x) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40+N_T60] =
-//     normal_lpdf(t_x[n]|mu[1],sigma[1]);
-//   }
-//   for (n in 1:N_y) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40+N_T60+N_x] =
-//     normal_lpdf(t_y[n]|mu[2],sigma[2]);
-//   }
-// }
+
+generated quantities {
+  vector[N_R20+N_R40+N_R60+N_T20+N_T40+N_T60+N_x+N_y] log_lik;
+  for (n in 1:N_R20) {
+    log_lik[n] =
+    DmgR_lpdf(X_R20[n,]|l_R20,mu,sigma,rho,alpha_R20);
+  }
+  for (n in 1:N_R40) {
+    log_lik[n+N_R20] =
+    DmgR_lpdf(X_R40[n,]|l_R40,mu,sigma,rho,alpha_R40);
+  }
+  for (n in 1:N_R60) {
+    log_lik[n+N_R20+N_R40] =
+    DmgR_lpdf(X_R60[n,]|l_R60,mu,sigma,rho,alpha_R60);
+  }
+  for (n in 1:N_T20) {
+    log_lik[n+N_R20+N_R40+N_R60] =
+    DmgT_lpdf(X_T20[n,]|l_T20,mu,sigma,rho,alpha_T20);
+  }
+  for (n in 1:N_T40) {
+    log_lik[n+N_R20+N_R40+N_R60+N_T20] =
+    DmgT_lpdf(X_T40[n,]|l_T40,mu,sigma,rho,alpha_T40);
+  }
+  for (n in 1:N_T60) {
+    log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40] =
+    DmgT_lpdf(X_T60[n,]|l_T60,mu,sigma,rho,alpha_T60);
+  }
+  for (n in 1:N_x) {
+    log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40+N_T60] =
+    normal_lpdf(t_x[n]|mu[1],sigma[1]);
+  }
+  for (n in 1:N_y) {
+    log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40+N_T60+N_x] =
+    normal_lpdf(t_y[n]|mu[2],sigma[2]);
+  }
+}
 
 

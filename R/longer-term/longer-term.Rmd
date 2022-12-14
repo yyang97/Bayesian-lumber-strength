@@ -1,0 +1,279 @@
+---
+title: "longer-term"
+author: "Yunfeng Yang"
+date: "3/7/2022"
+output: html_document
+---
+
+# Data preprocessing
+
+
+```{r}
+bending <- read.csv("bending-pl.csv", header = T)
+# convert psi to Mpa
+#  1 thousand psi = 6.895 MPa
+bending[,1] <- bending[,1]/1000*6.895
+l <- 4500/1000*6.895
+# bending_mar <- bending[1:195,]
+# bending_dmg <- bending[195:341,]
+
+R100_data <- bending[bending[,2] == "R100",1]
+R20_data <- bending[bending[,2] == "R20",1]
+R20R100_data <- bending[bending[,2] == "R20R100",1]
+
+
+length(R100_data)
+length(R20_data)
+length(R20R100_data)
+```
+
+# Data simulation
+
+We let thresh ($l$) = 0.75 and $\alpha = 0.5$.
+
+```{r}
+
+# mu = 47.91, sd = 18.84
+R100_data <- rnorm(138, mean = 47.91, sd =  18.84)
+l <- qnorm(.2, mean =  47.91, sd = 18.84)
+
+thresh <- 0.75
+alpha <- .5
+
+samples <- rnorm(500, mean = 47.91, sd =  18.84)
+
+R20_data <- samples[which(samples < l)]
+R20R100_data <- samples[which(samples > l)]
+for (ii in 1: length(R20R100_data)){
+  if(l > thresh*R20R100_data[ii]){
+    R20R100_data[ii] <- alpha * R20R100_data[ii]
+  }
+}
+
+
+sum(l > thresh*R20R100_data)
+```
+
+# Use MLE 
+
+- Recall that in the overleaf file (likelihood derivation), the pdf of the third term is 0. In the log likelihood, it is assigned with -10000 to represent `-Inf`. Check the third the condition of the `dmglik` function. 
+- Also, mu and sigma are fixed as the true value, i.e., only alpha is estimated. 
+- The y axis is negative likelihood, which should be minimized. We see that $alpha = 0.5$ minimized the negative likelihood. 
+
+
+```{r}
+dmglik <- function(theta){
+  # mu <- theta[1]
+  # sigma <- theta[2]
+  mu <- 47.91
+  sigma <- 18.84
+  alpha <- theta
+  lik <- 0
+  for (jj in 1:length(R20R100_data)){
+    if(R20R100_data[jj]/alpha < l/thresh){
+      lik <- lik - log(alpha) + dnorm(R20R100_data[jj]/alpha, mean =  mu,sd = sigma, log = TRUE)
+    }else if(R20R100_data[jj]/alpha > l/thresh && R20R100_data[jj] > l/thresh){
+      lik <- lik + dnorm(R20R100_data[jj], mean = mu, sd = sigma,log = TRUE)
+    }
+    else if(R20R100_data[jj]/alpha > l/thresh && R20R100_data[jj] < l/thresh){
+      lik <- lik-10000
+    }
+  }
+  # lik <-  lik + sum(dnorm(c(R100_data,R20_data), mean = mu, sd = sigma, log = TRUE))
+  return(-1*lik)
+}
+
+optimdmg <- optimize(dmglik, c(0,20))
+optimdmg$minimum
+
+# show alpha from 0 to 1
+dmgvalue <- c()
+xseq <- seq(from = 0, to = 1, by= 0.1)
+for (jj in 1:length(xseq)){
+  dmgvalue[jj] <- dmglik(xseq[jj])
+}
+
+plot(xseq, dmgvalue,type = 'l')
+
+
+# show alpha from 0.5 to 1
+dmgvalue <- c()
+xseq <- seq(from = 0.5, to = 1, by= 0.1)
+for (jj in 1:length(xseq)){
+  dmgvalue[jj] <- dmglik(xseq[jj])
+}
+
+plot(xseq, dmgvalue,type = 'l')
+```
+
+- In fact, $\alpha < 0.5$ should provide `Inf`.
+- So the true alpha is always at the left boundary, i.e., the lowest alpha which can provide a valid likelihood. 
+- It is the same result when $\alpha = 0.8$ or $0.1$.
+
+
+# Stan fit 
+
+```{r, fig.width=7, fig.height= 4, message=FALSE, warning= FALSE}
+library(rstan)
+standata <- list(N_R20 = length(R20_data),N_R100 = length(R100_data),N_R20R100 = length(R20R100_data),
+                 X_R20 = R20_data, X_R100 = R100_data, X_R20R100 = R20R100_data,
+                 l = l, thresh = .75)
+init_dmg <- function() {
+  list(mu = 45, sigma = 20, alpha =0.5)
+}
+options(mc.cores = parallel::detectCores()) 
+dmg_mod <- stan_model("longerterm.stan")
+dmgfit <- rstan::sampling(dmg_mod, data = standata, init = init_dmg, iter = 4000)
+
+print(dmgfit)
+traceplot(dmgfit)
+
+pairs(dmgfit)
+```
+
+- alpha is pretty right-skewed as we know that alpha should be larger than 0.5
+- Not sure whether it is a good estimation but it makes sense 
+
+
+
+# Real data analysis
+
+I tried several thresh values. They basically provide very similar `lp__`. Here I use thresh = 0.82, which is slightly better. 
+
+```{r, fig.width=7, fig.height= 4, message=FALSE, warning= FALSE}
+bending <- read.csv("bending-pl.csv", header = T)
+# convert psi to Mpa
+#  1 thousand psi = 6.895 MPa
+bending[,1] <- bending[,1]/1000*6.895
+l <- 4500/1000*6.895
+# bending_mar <- bending[1:195,]
+# bending_dmg <- bending[195:341,]
+
+R100_data <- bending[bending[,2] == "R100",1]
+R20_data <- bending[bending[,2] == "R20",1]
+R20R100_data <- bending[bending[,2] == "R20R100",1]
+
+
+
+
+##--------------stan fitting----------------
+standata <- list(N_R20 = length(R20_data),N_R100 = length(R100_data),N_R20R100 = length(R20R100_data),
+                 X_R20 = R20_data, X_R100 = R100_data, X_R20R100 = R20R100_data,
+                 l = l, thresh = 0.82)
+init_dmg <- function() {
+  list(mu = 45, sigma = 20, alpha =0.5)
+}
+options(mc.cores = parallel::detectCores()) 
+# dmg_mod <- stan_model("longerterm.stan")
+dmgfit <- rstan::sampling(dmg_mod, data = standata, init = init_dmg)
+
+print(dmgfit)
+traceplot(dmgfit)
+```
+
+
+However, when thresh = 0.9, it gives a different result.
+
+```{r, fig.width=7, fig.height= 4, message=FALSE, warning= FALSE}
+##--------------stan fitting----------------
+standata <- list(N_R20 = length(R20_data),N_R100 = length(R100_data),N_R20R100 = length(R20R100_data),
+                 X_R20 = R20_data, X_R100 = R100_data, X_R20R100 = R20R100_data,
+                 l = l, thresh = 0.89)
+init_dmg <- function() {
+  list(mu = 45, sigma = 20, alpha =0.5)
+}
+options(mc.cores = parallel::detectCores()) 
+# dmg_mod <- stan_model("longerterm.stan")
+dmgfit <- rstan::sampling(dmg_mod, data = standata, init = init_dmg)
+
+print(dmgfit)
+traceplot(dmgfit)
+```
+
+
+
+# likelihood plot 
+
+Based on this plot , we can tell that the threshold <= 0.84 and  threshold >= 0.85 can give totally different likelihood plot. 
+
+
+Also, based on likelihood value, all the pieces are possible. If it has impossible pieces, the likelihood is very low. 
+```{r}
+thresh <-  .8
+neglik <- function(theta){
+  # mu <- theta[1]
+  # sigma <- theta[2]
+  mu <- 47.91
+  sigma <- 18.84
+  alpha <- theta
+  lik <- 0
+  for (jj in 1:length(R20R100_data)){
+    if(R20R100_data[jj]/alpha < l/thresh){
+      lik <- lik - log(alpha) + dnorm(R20R100_data[jj]/alpha, mean =  mu,sd = sigma, log = TRUE)
+    }else if(R20R100_data[jj]/alpha > l/thresh && R20R100_data[jj] > l/thresh){
+      lik <- lik + dnorm(R20R100_data[jj], mean = mu, sd = sigma,log = TRUE)
+    }
+    else if(R20R100_data[jj]/alpha > l/thresh && R20R100_data[jj] < l/thresh){
+      lik <- lik-10000
+    }
+  }
+  # lik <-  lik + sum(dnorm(c(R100_data,R20_data), mean = mu, sd = sigma, log = TRUE))
+  return(-1*lik)
+}
+
+
+
+alphaseq <- seq(from = 0.1,to = 1.2, by = 0.01)
+neglikseq <- c()
+for (iseq in 1:length(alphaseq) ){
+  neglikseq[iseq] <- neglik(alphaseq[iseq])
+  
+}
+
+plot(alphaseq,neglikseq,type = 'l',main = 'thresh = .8')
+```
+
+
+
+```{r}
+thresh <-  .9
+neglik <- function(theta){
+  # mu <- theta[1]
+  # sigma <- theta[2]
+  mu <- 47.91
+  sigma <- 18.84
+  alpha <- theta
+  lik <- 0
+  for (jj in 1:length(R20R100_data)){
+    if(R20R100_data[jj]/alpha < l/thresh){
+      lik <- lik - log(alpha) + dnorm(R20R100_data[jj]/alpha, mean =  mu,sd = sigma, log = TRUE)
+    }else if(R20R100_data[jj]/alpha > l/thresh && R20R100_data[jj] > l/thresh){
+      lik <- lik + dnorm(R20R100_data[jj], mean = mu, sd = sigma,log = TRUE)
+    }
+    else if(R20R100_data[jj]/alpha > l/thresh && R20R100_data[jj] < l/thresh){
+      lik <- lik-10000
+    }
+  }
+  # lik <-  lik + sum(dnorm(c(R100_data,R20_data), mean = mu, sd = sigma, log = TRUE))
+  return(-1*lik)
+}
+
+
+
+alphaseq <- seq(from = 0.1,to = 1.2, by = 0.01)
+neglikseq <- c()
+for (iseq in 1:length(alphaseq) ){
+  neglikseq[iseq] <- neglik(alphaseq[iseq])
+  
+}
+
+plot(alphaseq,neglikseq,type = 'l',main = 'thresh = .9')
+```
+
+When we look at the second condition of the lilkehood 'else if(R20R100_data[jj]/alpha > l/thresh && R20R100_data[jj] > l/thresh)'
+
+```{r}
+R20R100_data/alpha > l/thresh
+```
+
+So all the pieces are classified in to this condition ,where $P(Y^* = y^*) = P(Y = y^*)$. So alpha means nothing there and all the alpha from 0 to 1 give the same likelihood value. 

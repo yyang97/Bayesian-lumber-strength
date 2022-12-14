@@ -1,0 +1,643 @@
+---
+title: "likelihood"
+author: "Yunfeng Yang"
+date: "6/28/2022"
+output: html_document
+---
+
+In order to address the discontinuity in the plot, we propose a new linear model:
+
+
+$$
+Y^* = Y\cdot I(cY>l || Y <l) + (1/\alpha\cdot Y + l/c - 1/\alpha\cdot l/c)\cdot I(l<Y<l/c)
+$$      
+
+<!-- $$ -->
+<!-- Y^* = Y\cdot I(cY>l) + (1/\alpha\cdot Y + l/c - 1/\alpha\cdot l/c)\cdot I(cY<l) -->
+<!-- $$   -->
+
+Here is an example plot when $\alpha = 0.5$, $l = 32$, $c = 0.8$ where $c$ is the threshold that causes damage. 
+
+<!-- ```{r} -->
+<!-- yseq <- seq(from = 1, to = 100, by =.1) -->
+<!-- ystarseq <- ((1/0.5)*yseq + 32/.8 - 1/0.5*32/.8)*ifelse(.8*yseq<32,1,0) + yseq*ifelse(.8*yseq>=32,1,0) -->
+
+<!-- plot(yseq,ystarseq, type = 'l', ylim =c(0,100)) -->
+<!-- # the dash line is no damaged plot  -->
+<!-- abline(yseq, yseq, lty = 2) -->
+<!-- ``` -->
+
+
+```{r}
+yseq <- seq(from = 1, to = 100, by =.1)
+ystarseq <- ((1/0.2)*yseq + 32/.8 - 1/0.2*32/.8)*ifelse(.8*yseq<32 & yseq > 32,1,0) + yseq*ifelse(.8*yseq>=32 | yseq < 32,1,0)
+
+plot(yseq,ystarseq, type = 'l', ylim =c(0,100))
+# the dash line is no damaged plot 
+abline(yseq, yseq, lty = 2)
+```
+
+
+The solid line (damaged pieces) is below the  dash line (undamaged pieces), which is what we want. 
+
+# Likelihood derivation 
+
+## The likelihood of the pieces surviving after the proof loading, group 3
+
+Below we derive the likelihood of pieces surviving after the proof loading, which may be damaged or damaged according to the threshold. The group will be referred to group 3 later. 
+
+Given the model $Y^* = Y \cdot I(cY>l) + (1/\alpha \cdot Y + l/c - 1/\alpha \cdot l/c) \cdot I(cY<l)$, we can obtain 
+
+\begin{equation}
+\begin{split}
+p(Y^* < y^* ) &= p(Y < y^*|cY>l )p(cY>l) + p(\frac{1}{\alpha} \cdot Y + \frac{l}{c} - \frac{1}{\alpha} \cdot \frac{l}{c}) <y^* | cY<l)p(cY<l) \\
+&= p(Y < y^*, Y > \frac{l}{c}) + p(Y < \alpha \cdot y^* + \frac{l}{c} - \frac{\alpha\cdot l}{c}, Y <\frac{l}{c} )
+\end{split}
+\end{equation}
+
+Hence 
+\begin{equation}
+\begin{aligned}
+p(Y^* < y^* ) = 
+\begin{cases}
+p(Y < \alpha \cdot y^* + l/c - \alpha \cdot l/c) & y^* < l/c \\
+p(Y < y^*) & y^* > l/c.
+\end{cases}
+\end{aligned}
+\end{equation}
+
+And we can obtain the pdf:
+\begin{equation}
+\begin{aligned}
+f_{Y^*}( y^* ) = 
+\begin{cases}
+\alpha \cdot f_{Y}(\alpha y^* + l/c - \alpha\cdot l/c) & y^* < l/c \\
+f_{Y}(y^*) & y^* > l/c.
+\end{cases}
+\end{aligned}
+\end{equation}
+where $f_{Y}$ is the pdf of normal distribution.
+
+### The likelihood of the coding
+
+
+When $y^* > l/c$, $p(Y^* < y^*\mid Y^* >l/c) = p(Y < y^* \mid Y>l/c) = p(Y<y^*, Y>l/c)/p(Y>l/c)$
+
+So when $y^* > l/c$, $f_{Y^*}(y^*) = f_{Y}(y^*)/p(Y>l/c)$.
+
+
+when $l <y^* < l/c$,
+
+$p(Y^* < y^*\mid l<Y^* <l/c) = p(\frac{1}{\alpha} \cdot Y + \frac{l}{c} - \frac{1}{\alpha} \cdot \frac{l}{c} < y^* \mid l<\frac{1}{\alpha} \cdot Y + \frac{l}{c} - \frac{1}{\alpha} \cdot \frac{l}{c}<l/c) = p(Y <\alpha \cdot y^* + l/c - \alpha \cdot l/c, \alpha \cdot l + l/c - \alpha \cdot l/c< Y <l/c)/p(Y\alpha \cdot l + l/c - \alpha \cdot l/c< Y <l/c) = p(Y <\alpha \cdot y^* + l/c - \alpha \cdot l/c)/p(\alpha \cdot l + l/c - \alpha \cdot l/c< Y <l/c)$
+
+
+\begin{equation}
+\begin{aligned}
+p(Y^* < y^*\mid l<Y^* <l/c) &= p(\frac{1}{\alpha} \cdot Y + \frac{l}{c} - \frac{1}{\alpha} \cdot \frac{l}{c} < y^* \mid l<\frac{1}{\alpha} \cdot Y + \frac{l}{c} - \frac{1}{\alpha} \cdot \frac{l}{c}<l/c) \\
+&= p(Y <\alpha \cdot y^* + l/c - \alpha \cdot l/c, \alpha \cdot l + l/c - \alpha \cdot l/c< Y <l/c)/p(Y\alpha \cdot l + l/c - \alpha \cdot l/c< Y <l/c) \\
+&= p(Y <\alpha \cdot y^* + l/c - \alpha \cdot l/c)/p(\alpha \cdot l + l/c - \alpha \cdot l/c< Y <l/c)\\
+\end{aligned}
+\end{equation}
+
+When $l <y^* < l/c$,  $f_{Y^*}(y^*) = p(Y <\alpha \cdot y^* + l/c - \alpha \cdot l/c)/p(Y\alpha \cdot l + l/c - \alpha \cdot l/c< Y <l/c)$.
+
+
+
+## The likelihood of the pieces of being broken after the proof loading, group 2 
+
+Below we derive the likelihood of the pieces of being broken after the proof loading. The group will be referred to group 2 later. 
+
+It indicates the model $Y > l$ and $Y^* < l$. 
+
+The latter is converted due to below:
+
+\begin{equation}
+\begin{aligned}
+Y^* &< l \\
+Y \cdot I(cY>l) + (1/\alpha \cdot Y + l/c - 1/\alpha \cdot l/c) \cdot I(cY<l) &< l \\
+\end{aligned}
+\end{equation}
+  
+If $Y > l/c$, it becomes $Y <l$. However as $l/c > l$ always holds, this case is impossible. 
+
+If $Y < l/c$, it becomes $1/\alpha \cdot Y + l/c - 1/\alpha \cdot l/c < l$. Then it is $Y < \alpha \cdot l + l/c - \alpha \cdot l/c$. 
+
+
+
+Suppose there are $n$ pieces in this group 2, the likelihood of the group is $p(l<Y<\alpha \cdot l + l/c - \alpha \cdot l/c)^n$.
+
+<!-- Suppose there are $n$ in this group 2, and the whole dataset have $N$ pieces. Obviously, $n/N \approx p(l<Y<\alpha \cdot l + l/c - \alpha \cdot l/c)$.  -->
+
+
+<!-- From another perspective, we have $n \sim \text{Bin}(n,  p(l<Y<\alpha \cdot l + l/c - \alpha \cdot l/c))$. Thus we can derive the likelihood based on the pmf of binomial distribution.  -->
+
+
+
+# The likelihood for each piece 
+
+Let $f_{Y}(y;\mu,\sigma^2)$ denote the normal pdf at a given value $y$ with mean $\mu$ and variance $\sigma^2$.
+
+- When $y<l$, it belongs to group 1 where pieces are broken under the proof loading level. The likelihood for each piece is $f_{Y}(y;\mu,\sigma^2)$. Note that the group 1 is not under any proof loading damage effect, so the likelihood is not associated with $y^*$
+- When $\frac{l}{\alpha} + \frac{l}{c} - \frac{1}{\alpha}\cdot\frac{l}{c}<y^*<l$ or $l<y<\alpha \cdot l + l/c - \alpha \cdot l/c$ (basically it is derived from $y>l$ and $y^*<l$), the group 2 refers to the pieces which survived initially but broken after the damaged effect.  The likelihood for each piece is $f_{y^*}(y^*) = p(l<Y<\alpha \cdot l + l/c - \alpha \cdot l/c)$, where $Y$ follows $N(\mu, \sigma^2)$.
+- When $l<y^*<l/c$, it refers to group 3 where pieces survive after the proof loading level but are damaged/weaken. The likelihood for each piece is $f_{Y^*}(y^*) = \alpha \cdot f_{Y}(\alpha y^* + l/c - \alpha\cdot l/c;\mu,\sigma^2)$.
+- When $y^*>l/c$, it refers to group 3 where pieces survive after the proof loading level and no damage effect occurs. The likelihood for each piece is $f_{Y^*}(y^*) = f_{Y}(y^*;\mu,\sigma^2)$.
+
+
+To summarize, in group 1, the likelihood for each piece is $f_{Y}(y;\mu,\sigma^2)$. 
+
+In group 2 and group 3, the likelihood for each piece is 
+
+
+\begin{equation}
+\begin{aligned}
+f_{Y^*}( y^* ) = 
+\begin{cases}
+p(l<Y<\alpha \cdot l + l/c - \alpha \cdot l/c) & \frac{l}{\alpha} + \frac{l}{c} - \frac{1}{\alpha}\cdot\frac{l}{c}<y^*<l\\
+\alpha \cdot f_{Y}(\alpha y^* + l/c - \alpha\cdot l/c;\mu,\sigma^2) & l<y^*<l/c \\
+f_{Y}(y^* ;\mu,\sigma^2) & y^* > l/c.
+\end{cases}       
+\end{aligned}
+\end{equation}
+
+<!-- # simulation study  -->
+
+<!-- ## large dataset, N = 35000 -->
+
+
+<!-- ```{r,cache=TRUE} -->
+<!-- mu <- 47.91 -->
+<!-- sd <-  18.84 -->
+<!-- alpha <- .8 -->
+
+
+<!-- N <- 35000 -->
+<!-- samples <- rnorm(N, mean = mu, sd = sd) -->
+<!-- l <- qnorm(.2, mean =  mu, sd = sd) -->
+
+<!-- thresh <- 0.5 -->
+<!-- dataset <- list() -->
+
+
+<!-- # Group 1: Y < l,216, which is dataset[[1]] -->
+<!-- R20_data <- samples[which(samples < l)] -->
+<!-- dataset[[1]] <- R20_data -->
+
+<!-- # Group 2: Y>l, Y* < l -->
+<!-- R20R100_data <- samples[which(samples > l)] -->
+<!-- R20R100_observed <- c() -->
+<!-- damage_table <- c() -->
+
+<!-- for (ii in 1: length(R20R100_data)){ -->
+<!--   if(l > thresh*R20R100_data[ii]){ -->
+<!--     R20R100_observed[ii] <- 1/alpha * R20R100_data[ii] + l/thresh - 1/alpha*l/thresh -->
+<!--     # 1 means 'damaged' -->
+<!--     damage_table[ii] <- 1 -->
+<!--   } -->
+<!--   else{ -->
+<!--     # 0 means 'nondamaged' -->
+<!--     R20R100_observed[ii] <- R20R100_data[ii] -->
+<!--     damage_table[ii] <- 0 -->
+<!--   } -->
+<!-- } -->
+
+
+<!-- damage_data <- cbind(R20R100_observed,damage_table,R20R100_data) -->
+
+<!-- # dim(damage_data)[1] -->
+<!-- damage_data <- damage_data[damage_data[,1] > l,] -->
+
+<!-- # Group 2: Y>l, Y* < l, dataset[[2]] is the number of pieces in group 2 -->
+<!-- dataset[[2]] <- N - length(dataset[[1]]) - dim(damage_data)[1]  -->
+<!-- dataset[[2]]/N -->
+<!-- # check the probability of that interval -->
+<!-- pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sd) - pnorm(l, mean = mu, sd = sd) -->
+
+<!-- # check the optimization of group 2 -->
+<!-- dmglikgroup2 <- function(alpha){ -->
+<!--   pxga <- pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sd) - pnorm(l, mean = mu, sd = sd) -->
+<!--   lik <-  dbinom(dataset[[2]], size = N, prob = pxga, log = TRUE) -->
+<!--   return(-1*lik) -->
+<!-- } -->
+<!-- optimize(dmglikgroup2,c(0,1)) -->
+
+
+<!-- # Group 3: Y*>l -->
+<!-- dataset[[3]] <- damage_data -->
+
+
+<!-- R20R100_data <- dataset[[3]][,1] -->
+
+<!-- # check the optimization of group 3 -->
+<!-- dmglik <- function(theta){ -->
+<!--   mu <- 47.91 -->
+<!--   sigma <- 18.84 -->
+<!--   alpha <- theta -->
+<!--   lik <- 0 -->
+<!--   est_y <-c() -->
+<!--   cond <- c() -->
+<!--   for (jj in 1:length(R20R100_data)){ -->
+<!--     if(R20R100_data[jj]  < l/thresh){ -->
+<!--     lik <- lik + log(alpha) + dnorm(alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh, mean =  mu,sd = sigma, log = TRUE) - log(pnorm(l/thresh, mean = mu, sd = sigma)-pnorm(alpha*l + l/thresh - alpha*l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh -->
+<!--     cond[jj] <- 1 -->
+<!--     } -->
+<!--     else -->
+<!--     { -->
+<!--     lik <- lik + dnorm(R20R100_data[jj], mean = mu, sd = sigma,log = TRUE)- log(1 - pnorm(l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- R20R100_data[jj] -->
+<!--     cond[jj] <- 0 -->
+<!--     } -->
+<!--   } -->
+<!--   # lik <-  lik + sum(dnorm(c(R100_data,R20_data), mean = mu, sd = sigma, log = TRUE)) -->
+<!--   #liktable <- data.frame(R20R100_data,est_y,cond) -->
+<!--   return(-1*lik) -->
+<!--   #return(liktable) -->
+<!-- } -->
+<!-- #   -->
+<!-- optimize(dmglik, c(0,2))  -->
+
+<!-- # check the optimization of the whole dataset  -->
+
+<!-- dmglik <- function(theta,thresh){ -->
+<!--   mu <- theta[1] -->
+<!--   sigma <- theta[2] -->
+<!--   alpha <- theta[3] -->
+<!--   # mu <- 47.91 -->
+<!--   # sigma <- 18.84 -->
+<!--   # alpha <- theta -->
+<!--   est_y <-c() -->
+<!--   cond <- c() -->
+<!--   # group 1 -->
+<!--   lik <- sum(dnorm(R20_data, mean = mu, sd = sigma, log = TRUE) - log(pnorm(l, mean  = mu, sd = sigma))) -->
+<!--   # group 2 -->
+<!--   # lik <- lik + dataset[[2]]*log(pnorm(l/thresh, mean = mu, sd = sigma) - pnorm(l, mean = mu, sd = sigma )) -->
+<!--   #lik <- lik + dataset[[2]]*log(pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sigma) - pnorm(l, mean = mu, sd = sigma )) -->
+<!--   # p(l<x<alpha*l+l/thresh - alpha*l/thresh) -->
+<!--   pxga <- pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sigma) - pnorm(l, mean = mu, sd = sigma) -->
+<!--   lik <- lik + dbinom(dataset[[2]], size = N, prob = pxga, log = TRUE) -->
+<!--   likindi <- c() -->
+<!--   for (jj in 1:length(R20R100_data)){ -->
+<!--     if(R20R100_data[jj]  < l/thresh){ -->
+<!--     # lik <- lik - log(alpha) + dnorm((R20R100_observed[jj]+ alpha*l/thresh - l/thresh)/alpha, mean =  mu,sd = sigma, log = TRUE) -->
+<!--     # likindi[jj] <- -1*log(alpha) + dnorm((R20R100_observed[jj]+ alpha*l/thresh - l/thresh)/alpha, mean =  mu,sd = sigma, log = TRUE) -->
+<!--     # est_y[jj] <- (data[jj]+ alpha*l/thresh - l/thresh)/alpha -->
+<!--     lik <- lik + log(alpha) + dnorm(alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh, mean =  mu,sd = sigma, log = TRUE) - log(pnorm(l/thresh, mean = mu, sd = sigma)-pnorm(alpha*l + l/thresh - alpha*l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh -->
+<!--     cond[jj] <- 1 -->
+<!--     } -->
+<!--     else -->
+<!--     { -->
+<!--     lik <- lik + dnorm(R20R100_data[jj], mean = mu, sd = sigma,log = TRUE)- log(1 - pnorm(l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- R20R100_data[jj] -->
+<!--     cond[jj] <- 0 -->
+<!--     } -->
+<!--   } -->
+<!--   # lik <-  lik + sum(dnorm(c(R100_data,R20_data), mean = mu, sd = sigma, log = TRUE)) -->
+<!--   #liktable <- data.frame(R20R100_data,est_y,cond) -->
+<!--   return(-1*lik) -->
+<!--   #return(liktable) -->
+<!-- } -->
+
+
+<!-- optimout <- optim(c(47.91,18.84,.8),thresh = .5, -->
+<!--                   dmglik,  -->
+<!--                   lower = c(20,10,.001), -->
+<!--                   upper = c(80,30,2),  -->
+<!--                   method = "L-BFGS-B") -->
+<!-- optimout$par -->
+<!-- ``` -->
+
+
+<!-- Also, we show the plot under different alpha sequence and the fixed mu and sigma. -->
+
+<!-- ```{r} -->
+<!-- alphaseq <- seq(from = 0.1,to = 1, by = 0.01) -->
+<!-- likseq <- c() -->
+<!-- for (iseq in 1:length(alphaseq) ){ -->
+<!--   likseq[iseq] <- dmglik(c(47.91,18.84,alphaseq[iseq]),thresh = .5) -->
+
+<!-- } -->
+
+<!-- plot(alphaseq, likseq,type = 'l') -->
+<!-- ``` -->
+
+
+
+<!-- ## Small dataset, N = 350 -->
+
+<!-- ```{r, cache= TRUE} -->
+<!-- mu <- 47.91 -->
+<!-- sd <-  18.84 -->
+<!-- alpha <- .8 -->
+
+
+<!-- N <- 350 -->
+<!-- samples <- rnorm(N, mean = mu, sd = sd) -->
+<!-- l <- qnorm(.2, mean =  mu, sd = sd) -->
+
+<!-- thresh <- 0.5 -->
+<!-- dataset <- list() -->
+
+
+<!-- # Group 1: Y < l,216, which is dataset[[1]] -->
+<!-- R20_data <- samples[which(samples < l)] -->
+<!-- dataset[[1]] <- R20_data -->
+
+<!-- # Group 2: Y>l, Y* < l -->
+<!-- R20R100_data <- samples[which(samples > l)] -->
+<!-- R20R100_observed <- c() -->
+<!-- damage_table <- c() -->
+
+<!-- for (ii in 1: length(R20R100_data)){ -->
+<!--   if(l > thresh*R20R100_data[ii]){ -->
+<!--     R20R100_observed[ii] <- 1/alpha * R20R100_data[ii] + l/thresh - 1/alpha*l/thresh -->
+<!--     # 1 means 'damaged' -->
+<!--     damage_table[ii] <- 1 -->
+<!--   } -->
+<!--   else{ -->
+<!--     # 0 means 'nondamaged' -->
+<!--     R20R100_observed[ii] <- R20R100_data[ii] -->
+<!--     damage_table[ii] <- 0 -->
+<!--   } -->
+<!-- } -->
+
+
+<!-- damage_data <- cbind(R20R100_observed,damage_table,R20R100_data) -->
+
+<!-- # dim(damage_data)[1] -->
+<!-- damage_data <- damage_data[damage_data[,1] > l,] -->
+
+<!-- # Group 2: Y>l, Y* < l, dataset[[2]] is the number of pieces in group 2 -->
+<!-- dataset[[2]] <- N - length(dataset[[1]]) - dim(damage_data)[1]  -->
+<!-- dataset[[2]]/N -->
+<!-- # check the probability of that interval -->
+<!-- pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sd) - pnorm(l, mean = mu, sd = sd) -->
+
+<!-- # check the optimization of group 2 -->
+<!-- dmglikgroup2 <- function(alpha){ -->
+<!--   pxga <- pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sd) - pnorm(l, mean = mu, sd = sd) -->
+<!--   lik <-  dbinom(dataset[[2]], size = N, prob = pxga, log = TRUE) -->
+<!--   return(-1*lik) -->
+<!-- } -->
+<!-- optimize(dmglikgroup2,c(0,1)) -->
+
+
+<!-- # Group 3: Y*>l -->
+<!-- dataset[[3]] <- damage_data -->
+
+
+<!-- R20R100_data <- dataset[[3]][,1] -->
+
+<!-- # check the optimization of group 3 -->
+<!-- dmglik <- function(theta){ -->
+<!--   mu <- 47.91 -->
+<!--   sigma <- 18.84 -->
+<!--   alpha <- theta -->
+<!--   lik <- 0 -->
+<!--   est_y <-c() -->
+<!--   cond <- c() -->
+<!--   for (jj in 1:length(R20R100_data)){ -->
+<!--     if(R20R100_data[jj]  < l/thresh){ -->
+<!--     lik <- lik + log(alpha) + dnorm(alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh, mean =  mu,sd = sigma, log = TRUE) - log(pnorm(l/thresh, mean = mu, sd = sigma)-pnorm(alpha*l + l/thresh - alpha*l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh -->
+<!--     cond[jj] <- 1 -->
+<!--     } -->
+<!--     else -->
+<!--     { -->
+<!--     lik <- lik + dnorm(R20R100_data[jj], mean = mu, sd = sigma,log = TRUE)- log(1 - pnorm(l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- R20R100_data[jj] -->
+<!--     cond[jj] <- 0 -->
+<!--     } -->
+<!--   } -->
+<!--   # lik <-  lik + sum(dnorm(c(R100_data,R20_data), mean = mu, sd = sigma, log = TRUE)) -->
+<!--   #liktable <- data.frame(R20R100_data,est_y,cond) -->
+<!--   return(-1*lik) -->
+<!--   #return(liktable) -->
+<!-- } -->
+<!-- #   -->
+<!-- optimize(dmglik, c(0,2))  -->
+
+<!-- # check the optimization of the whole dataset  -->
+
+<!-- dmglik <- function(theta,thresh){ -->
+<!--   mu <- theta[1] -->
+<!--   sigma <- theta[2] -->
+<!--   alpha <- theta[3] -->
+<!--   # mu <- 47.91 -->
+<!--   # sigma <- 18.84 -->
+<!--   # alpha <- theta -->
+<!--   est_y <-c() -->
+<!--   cond <- c() -->
+<!--   # group 1 -->
+<!--   lik <- sum(dnorm(R20_data, mean = mu, sd = sigma, log = TRUE) - log(pnorm(l, mean  = mu, sd = sigma))) -->
+<!--   # group 2 -->
+<!--   # lik <- lik + dataset[[2]]*log(pnorm(l/thresh, mean = mu, sd = sigma) - pnorm(l, mean = mu, sd = sigma )) -->
+<!--   #lik <- lik + dataset[[2]]*log(pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sigma) - pnorm(l, mean = mu, sd = sigma )) -->
+<!--   # p(l<x<alpha*l+l/thresh - alpha*l/thresh) -->
+<!--   pxga <- pnorm(alpha*l+l/thresh - alpha*l/thresh, mean = mu, sd = sigma) - pnorm(l, mean = mu, sd = sigma) -->
+<!--   lik <- lik + dbinom(dataset[[2]], size = N, prob = pxga, log = TRUE) -->
+<!--   likindi <- c() -->
+<!--   for (jj in 1:length(R20R100_data)){ -->
+<!--     if(R20R100_data[jj]  < l/thresh){ -->
+<!--     # lik <- lik - log(alpha) + dnorm((R20R100_observed[jj]+ alpha*l/thresh - l/thresh)/alpha, mean =  mu,sd = sigma, log = TRUE) -->
+<!--     # likindi[jj] <- -1*log(alpha) + dnorm((R20R100_observed[jj]+ alpha*l/thresh - l/thresh)/alpha, mean =  mu,sd = sigma, log = TRUE) -->
+<!--     # est_y[jj] <- (data[jj]+ alpha*l/thresh - l/thresh)/alpha -->
+<!--     lik <- lik + log(alpha) + dnorm(alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh, mean =  mu,sd = sigma, log = TRUE) - log(pnorm(l/thresh, mean = mu, sd = sigma)-pnorm(alpha*l + l/thresh - alpha*l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- alpha*R20R100_data[jj]+l/thresh-alpha*l/thresh -->
+<!--     cond[jj] <- 1 -->
+<!--     } -->
+<!--     else -->
+<!--     { -->
+<!--     lik <- lik + dnorm(R20R100_data[jj], mean = mu, sd = sigma,log = TRUE)- log(1 - pnorm(l/thresh, mean = mu, sd = sigma)) -->
+<!--     est_y[jj] <- R20R100_data[jj] -->
+<!--     cond[jj] <- 0 -->
+<!--     } -->
+<!--   } -->
+<!--   # lik <-  lik + sum(dnorm(c(R100_data,R20_data), mean = mu, sd = sigma, log = TRUE)) -->
+<!--   #liktable <- data.frame(R20R100_data,est_y,cond) -->
+<!--   return(-1*lik) -->
+<!--   #return(liktable) -->
+<!-- } -->
+
+
+<!-- optimout <- optim(c(47.91,18.84,.8),thresh = .5, -->
+<!--                   dmglik,  -->
+<!--                   lower = c(20,10,.001), -->
+<!--                   upper = c(80,30,2),  -->
+<!--                   method = "L-BFGS-B") -->
+<!-- optimout$par -->
+<!-- ``` -->
+
+
+<!-- Also, we show the plot under different alpha sequence and the fixed mu and sigma. -->
+
+<!-- ```{r} -->
+<!-- alphaseq <- seq(from = 0.1,to = 1, by = 0.01) -->
+<!-- likseq <- c() -->
+<!-- for (iseq in 1:length(alphaseq) ){ -->
+<!--   likseq[iseq] <- dmglik(c(47.91,18.84,alphaseq[iseq]),thresh = .5) -->
+<!-- } -->
+
+<!-- plot(alphaseq, likseq,type = 'l') -->
+<!-- ``` -->
+
+
+
+# Questions
+
+1. The pieces in group 1 and group 2 can have the same ystar, i.e., the damage model is not a one-to-one function in these two groups. How would you explain that?
+
+It is possible. One piece in group 2 can be stronger than another one in group 1. But then the former in group 2 is damaged/weaken to be the same strong as the latter in group 1.
+
+
+2. Another likelihood for group 3
+
+\begin{aligned}
+&p(Y^* < y^* \mid Y^* > l) \\
+= & p (Y\cdot I(cY>l) + (1/\alpha\cdot Y + l/c - 1/\alpha\cdot l/c)\cdot I(l<Y<l/c) \mid Y^* > l) \\ 
+= & p(Y < y^* \mid Y^* >l,Y > l/c)p(Y>l/c) + p(1/\alpha\cdot Y + l/c - 1/\alpha\cdot l/c < y^* \mid Y^* > l, l<Y<l/c)p(l<Y<l/c) \\
+=& p(Y < y^* \mid Y > l/c)p(Y>l/c) + p(1/\alpha\cdot Y + l/c - 1/\alpha\cdot l/c < y^* \mid \alpha l + l/c - \alpha l/c<Y<l/c)p(l<Y<l/c) \\
+=& p(l/c <Y < y^* ) + p(Y<\alpha Y^* + l/c - \alpha l/c, \alpha l + l/c - \alpha l/c<Y<l/c )p(\alpha l + l/c - \alpha l/c<Y<l/c )/p(l>Y<l/c)
+\end{aligned}
+
+
+So when $y^*> l/c$, $f_{Y^*}(y^*) = f_{Y}(y^*)$.
+
+When $l<y^*<l/c$, $f_{Y^*}(y^*) = \alpha f_{Y}(\alpha Y^* + l/c - \alpha l/c)p(\alpha l + l/c - \alpha l/c<Y<l/c )/p(l>Y<l/c)$.
+
+
+
+# CDF and PDf of ystar
+
+
+Use `density()` and `ecdf()`
+```{r}
+yseq <- rnorm(100000,mean = 48, sd = 19)
+ystarseq <- ((1/0.5)*yseq + 32/.8 - 1/0.5*32/.8)*ifelse(.8*yseq<32 & yseq > 32,1,0) + yseq*ifelse(.8*yseq>=32 | yseq < 32,1,0)
+plot(density(ystarseq))
+plot(ecdf(ystarseq))
+abline(v = 32)
+abline(v = 32/.8)
+```
+
+
+```{r}
+x <- seq(from = 0, to = 100, by = .01)
+
+alpha <- .5
+c <- .8
+l <- 32
+xcdf <- c()
+for(ii in 1:length(x)){
+  if(x[ii] < 1/alpha*l + l/c - 1/alpha*l/c){
+    xcdf[ii] <- pnorm(x[ii], mean = 48, sd = 19)
+  }
+  else if(x[ii] > 1/alpha*l + l/c - 1/alpha*l/c & x[ii] <l){
+    xcdf[ii] <- pnorm(x[ii], mean = 48, sd = 19) + 
+      pnorm(alpha*x[ii] + l/c - alpha*l/c, mean = 48, sd = 19) - 
+      pnorm(l, mean = 48, sd = 19)
+  }
+  else if(x[ii] > l & x[ii] < l/c){
+    xcdf[ii] <- pnorm(alpha*x[ii] + l/c - alpha*l/c, mean = 48, sd = 19)  
+  }
+  else if(x[ii] > l/c){
+    xcdf[ii] <- pnorm(x[ii], mean = 48, sd = 19)
+  }
+  
+}
+
+plot(x,xcdf,type = 'l')
+
+
+
+## pdf 
+xpdf <- c()
+for(ii in 1:length(x)){
+  if(x[ii] < 1/alpha*l + l/c - 1/alpha*l/c){
+    xpdf[ii] <- dnorm(x[ii], mean = 48, sd = 19)
+  }
+  else if(x[ii] > 1/alpha*l + l/c - 1/alpha*l/c & x[ii] <l){
+    xpdf[ii] <- dnorm(x[ii], mean = 48, sd = 19) + 
+      alpha*dnorm(alpha*x[ii] + l/c - alpha*l/c, mean = 48, sd = 19) 
+  }
+  else if(x[ii] > l & x[ii] < l/c){
+    xpdf[ii] <- alpha*dnorm(alpha*x[ii] + l/c - alpha*l/c, mean = 48, sd = 19)  
+  }
+  else if(x[ii] > l/c){
+    xpdf[ii] <- dnorm(x[ii], mean = 48, sd = 19)
+  }
+  
+}
+plot(x,xpdf,type = 'l')
+```
+
+
+```{r}
+
+dmglik <- function(x, alpha){
+  mu <- 48
+  sigma <- 19
+  lik <- 0
+  
+  id1 <-  x < 1/alpha*l + l/c - 1/alpha*l/c
+  lik <- sum(dnorm(x[id1], mean = mu, sd = sigma, log = TRUE))
+  
+  id2 <- x> 1/alpha*l + l/c - 1/alpha*l/c & x <l
+  lik <- lik + sum(log(dnorm(x[id2], mean = mu, sd = sigma) + 
+    alpha*dnorm(alpha*x[id2] + l/c - alpha*l/c, mean = mu, sd = sigma)))
+  
+  id3 <- x > l & x < l/c
+  lik <- lik + sum(log(alpha*dnorm(alpha*x[id3] + l/c - alpha*l/c, mean = mu, sd = sigma)))
+  
+  id4 <- x > l/c
+  lik <- lik + sum(dnorm(x[id4], mean = mu, sd = sigma, log = TRUE))
+  
+  return(-lik)
+  
+}
+
+
+alphaseq <- seq(from = .01, to = .99, by = 0.01)
+likvalue <- c()
+for (jj in 1:length(alphaseq)){
+  likvalue[jj] <- dmglik(ystarseq, alphaseq[jj])
+}
+
+plot(alphaseq, likvalue, type = 'l')
+
+
+
+dmglik <- function(x, theta){
+  mu <- theta[1] 
+  sigma <- theta[2]
+  alpha <- theta[3]
+  c <- theta[4]
+  lik <- 0
+  
+  id1 <-  x < 1/alpha*l + l/c - 1/alpha*l/c
+  lik <- sum(dnorm(x[id1], mean = mu, sd = sigma, log = TRUE))
+  
+  id2 <- x> 1/alpha*l + l/c - 1/alpha*l/c & x <l
+  lik <- lik + sum(log(dnorm(x[id2], mean = mu, sd = sigma) + 
+                         alpha*dnorm(alpha*x[id2] + l/c - alpha*l/c, mean = mu, sd = sigma)))
+  
+  id3 <- x > l & x < l/c
+  lik <- lik + sum(log(alpha*dnorm(alpha*x[id3] + l/c - alpha*l/c, mean = mu, sd = sigma)))
+  
+  id4 <- x > l/c
+  lik <- lik + sum(dnorm(x[id4], mean = mu, sd = sigma, log = TRUE))
+  
+  return(-lik)
+  
+}
+
+optim(c(48,19,.5,.5),dmglik, x = ystarseq,
+      lower = c(20,10,.001,.001),
+      upper = c(80,30,2,2), 
+      method = "L-BFGS-B")$par
+
+
+```
+
+
+

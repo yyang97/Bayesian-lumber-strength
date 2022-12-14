@@ -1,0 +1,32 @@
+Case 1 : cpu 152 screen full
+ 
+# alpha_R <- 10* c(0.67,1.83,1.29)
+# alpha_T <- 10*c(85.23,104.09,65.95)
+
+
+Case 2:  cpu 133 partial (updated with recording whole LOO object)
+
+# alpha_R <- 10* c(0,1.83,0)
+# alpha_T <- 10*c(0,104.09,65.95)
+
+
+cpu143 2* 
+cpu149 5*
+Cpu141 3*
+
+
+Case 3: cpu135 onlyR40 (updated with recording whole LOO object)
+
+# alpha_R <- 1* c(0,1.3,0)
+# alpha_T <- 0*c(0,104.09,65.95)
+
+Case 4: cpu 131
+
+# alpha_R <- 0* c(0,1.3,0)
+# alpha_T <- 0*c(0,104.09,65.95)
+
+
+Case 5: cpu 141 real data
+
+
+

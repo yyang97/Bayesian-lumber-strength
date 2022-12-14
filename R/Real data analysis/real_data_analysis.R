@@ -1,13 +1,12 @@
 require(rstan)
 require(MASS)
 require(loo)
-install.packages("jsonlite", type = "source")
-devtools::find_rtools()
-
-###------------------data preprocessing--------------
-setwd("F:/study/Research/Bayesian-lumber-strength/Data")
 library(readxl)
 library(dplyr)
+library(moments)
+###------------------data preprocessing--------------
+#setwd("~/Downloads/github/Bayesian-lumber-strength/R/Real data analysis")
+
 summary_all08122013 <- read_excel("summary_all08122013.xlsx")
 
 summary_all08122013
@@ -113,23 +112,23 @@ T60_data$UTS <- c*T60_data$UTS
 T100_data <- c*T100_data
 
 ##-------check normal fitting---------
-
-library(fitdistrplus)
-
-# check R100_data
-FIT <- fitdist(R100_data, "norm")    ## note: it is "norm" not "normal"
-plot(FIT)    ## use method `plot.fitdist`
-FIT$estimate # mean = 45.679 sd = 12.900
-FIT$bic # bic = 1394.022
-# good normal fitting 
-
-
-# check T100_data
-
-shapiro.test(T100_data) # p = 0.0001841
-shapiro.test(log(T100_data)) # p-value = 0.002327
-shapiro.test(sqrt(T100_data)) # p-value = 0.3988
-
+# 
+# library(fitdistrplus)
+# 
+# # check R100_data
+# FIT <- fitdist(R100_data, "norm")    ## note: it is "norm" not "normal"
+# plot(FIT)    ## use method `plot.fitdist`
+# FIT$estimate # mean = 45.679 sd = 12.900
+# FIT$bic # bic = 1394.022
+# # good normal fitting 
+# 
+# 
+# # check T100_data
+# 
+# shapiro.test(T100_data) # p = 0.0001841
+# shapiro.test(log(T100_data)) # p-value = 0.002327
+# shapiro.test(sqrt(T100_data)) # p-value = 0.3988
+# 
 
 
 ##------proof loading-------------- 
@@ -192,7 +191,6 @@ T60_data <- cbind(T60_data$UTS,T60_data$MOR,T60_data$Broken)
 
 
 ##------ Stan for all alpha-------------
-setwd("F:/study/Research/Bayesian-lumber-strength/R/Real data analysis")
 dmg_mod <- stan_model("damage.stan")
 
 init_dmg <- function() {
@@ -215,8 +213,17 @@ print(dmg_fit,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
                             'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
 
 
+#summary(dmg_fit,pars = 'rho')$summary[,c('mean','2.5%','97.5%')]
+
+
 pairs(dmg_fit,pars = c('rho','alpha_R20','alpha_R40',
                             'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
+
+dmg_alpha <- extract(dmg_fit,pars = c('alpha_R20','alpha_R40',
+                                     'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
+dmg_wood <- extract(dmg_fit,pars = c('mu','sigma','rho'))
+sapply(dmg_wood, moments::skewness)
+sapply(dmg_alpha, moments::skewness)
 
 
 loo_dmg <- loo(dmg_fit)
@@ -280,13 +287,13 @@ loo_compare(loo_R40dmg, loo_nondamage)
 
 
 ##-------------------Model 4 let alpha_R40 be real----------------
-R40dmg_mod <- stan_model("only_alphaR40_real.stan")
+R40dmgreal_mod <- stan_model("only_alphaR40_real.stan")
 init_R40dmg <- function() {
   list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R40 = 1)
 }
 
 
-R40dmg_fit <- sampling(object = R40dmg_mod,
+R40dmgreal_fit <- sampling(object = R40dmgreal_mod,
                        data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
                                    N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
                                    N_x = length(T100_data),N_y = length(R100_data),
@@ -296,20 +303,26 @@ R40dmg_fit <- sampling(object = R40dmg_mod,
                                    l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
                                    l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
                        control = list(adapt_delta = 0.8),init = init_R40dmg)
-print(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
-pairs(R40dmg_fit,pars = c('mu','sigma','rho','alpha_R40'))
+print(R40dmgreal_fit,pars = c('mu','sigma','rho','alpha_R40'))
+pairs(R40dmgreal_fit,pars = c('mu','sigma','rho','alpha_R40'))
 
 
+R40alpha <- extract(R40dmgreal_fit, pars = c('alpha_R40'))
+moments::skewness(R40alpha[[1]])
+
+
+loo_R40dmgrel <- loo(R40dmgreal_fit)
+loo_compare(loo_R40dmg, loo_R40dmgrel)
 
 ##-------------------Model 5 let all alpha's be real----------------
-dmg_mod <- stan_model("damage_real.stan")
+dmgreal_mod <- stan_model("damage_real.stan")
 
 init_dmg <- function() {
   list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R20 = 1,
        alpha_R40 = 1,alpha_R60 = 1,alpha_T20 = 1,alpha_T40 =1,alpha_R60 = 1 )
 }
 
-dmg_fit <- sampling(object = dmg_mod,
+dmgreal_fit <- sampling(object = dmgreal_mod,
                     data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
                                 N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
                                 N_x = length(T100_data),N_y = length(R100_data),
@@ -320,14 +333,54 @@ dmg_fit <- sampling(object = dmg_mod,
                                 l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
                     control = list(adapt_delta = 0.8),init = init_dmg)
 
-print(dmg_fit,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
+print(dmgreal_fit,pars = c('mu','sigma','rho','alpha_R20','alpha_R40',
                        'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
 
 
-pairs(dmg_fit,pars = c('rho','alpha_R20','alpha_R40',
+pairs(dmgreal_fit,pars = c('rho','alpha_R20','alpha_R40',
                        'alpha_R60','alpha_T20','alpha_T40','alpha_T60'))
 
+# 4976
+loo_dmgrel <- loo(dmgreal_fit)
+##-------------model 6 real alpha--------------
+R40dmg_mod <- stan_model("only_alphaR40_real.stan")
+init_R40dmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R40 = 1)
+}
+R40dmg_fit <- sampling(object = R40dmg_mod,
+                       data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                   N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                   N_x = length(T100_data),N_y = length(R100_data),
+                                   X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                   X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                   t_x = R100_data,t_y = T100_data,
+                                   l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                   l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                       control = list(adapt_delta = 0.8),init = init_R40dmg)
 
+ 
+##----------------model with only R40----------------------------------
+R40T40dmg_mod <- stan_model("alphaR40T40.stan")
+init_R40T40dmg <- function() {
+  list(mu = c(35,8), sigma = c(10,1), rho = .5, alpha_R40 = 1,alpha_T40 = 1)
+}
+
+
+R40T40dmg_fit <- sampling(object = R40T40dmg_mod,
+                       data = list(N_R20 = nrow(R20_data),N_R40 = nrow(R40_data),N_R60 = nrow(R60_data),
+                                   N_T20 = nrow(T20_data),N_T40 = nrow(T40_data),N_T60 = nrow(T60_data),
+                                   N_x = length(T100_data),N_y = length(R100_data),
+                                   X_R20 = R20_data,X_R40 = R40_data,X_R60 = R60_data,
+                                   X_T20 = T20_data,X_T40 = T40_data,X_T60 = T60_data,
+                                   t_x = R100_data,t_y = T100_data,
+                                   l_R20=R_pf[1],l_R40=R_pf[2],l_R60=R_pf[3],
+                                   l_T20=T_pf[1],l_T40=T_pf[2],l_T60=T_pf[3]),
+                       control = list(adapt_delta = 0.8),init = init_R40T40dmg)
+print(R40T40dmg_fit,pars = c('mu','sigma','rho','alpha_R40','alpha_T40'))
+pairs(R40T40dmg_fit,pars = c('mu','sigma','rho','alpha_R40','alpha_T40'))
+# LOOIC, 5057.9
+
+loo_R40T40dmg_fit <- loo(R40T40dmg_fit)
 
 ##---------------Posterior predictive checks------------------------####
 
