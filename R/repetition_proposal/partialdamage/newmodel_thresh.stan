@@ -33,11 +33,11 @@ functions {
     real loglik;
     real a_l;
     if(x[3] == 1){
-      //loglik = (-(x[1] - mu[1])^2/(2*sigma[1]^2))-log(sigma[1]);
-      loglik = normal_lpdf(x[1]|mu[1],sigma[1])-log(normal_cdf(l,mu[1],sigma[1]));
+      loglik = normal_lpdf(x[1]|mu[1],sigma[1]);
     }
     else{
-      loglik = -log(1 - normal_cdf(l,mu[1],sigma[1])) + log(1/alpha * (int_R(x[2]/alpha,mu,sigma, rho,l) - int_R(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_R(x[2],mu,sigma, rho,l/thresh));
+          loglik = log(1/alpha * (int_R(x[2]/alpha,mu,sigma, rho,l) - int_R(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_R(x[2],mu,sigma, rho,l/thresh));
+
     }
     return loglik;
   }
@@ -47,11 +47,11 @@ functions {
     real loglik;
     real a_l;
     if(x[3] == 1){
-      //loglik = (-(x[1] - mu[1])^2/(2*sigma[1]^2))-log(sigma[1]);
-      loglik = normal_lpdf(x[1]|mu[2],sigma[2])-log(normal_cdf(l,mu[2],sigma[2]));
+      loglik = normal_lpdf(x[1]|mu[2],sigma[2]);
     }
     else{
-      loglik = -log(1 - normal_cdf(l,mu[2],sigma[2])) + log(1/alpha * (int_T(x[2]/alpha,mu,sigma, rho,l) - int_T(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_T(x[2],mu,sigma, rho,l/thresh));
+          loglik = log(1/alpha * (int_T(x[2]/alpha,mu,sigma, rho,l) - int_T(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_T(x[2],mu,sigma, rho,l/thresh));
+
     }
     return loglik;
   }
@@ -91,17 +91,12 @@ data {
 parameters {
   real mu[2];
   real<lower=0> sigma[2];
-  real<lower=-1,upper = 1> rho;
+  real<lower=0,upper = 1> rho;
   real<lower=0, upper = 5> alpha[6];
   real<lower=0,upper = 1> thresh;
 }
 
-//generated quantities{
- //vector[N_R20] log_lik;
-  //for (n in 1:N_R20){
-  //  log_lik[n] = DmgR_lpdf(X_R20[n,]|l_R20,mu,sigma,rho,alpha_R20);
-  //}
-//}
+
 
 
 // The model to be estimated. We model the output

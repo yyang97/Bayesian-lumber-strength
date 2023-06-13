@@ -34,10 +34,10 @@ functions {
     real a_l;
     if(x[3] == 1){
       //loglik = (-(x[1] - mu[1])^2/(2*sigma[1]^2))-log(sigma[1]);
-      loglik = normal_lpdf(x[1]|mu[1],sigma[1])-log(normal_cdf(l,mu[1],sigma[1]));
+      loglik = normal_lpdf(x[1]|mu[1],sigma[1]);
     }
     else{
-      loglik = -log(1 - normal_cdf(l,mu[1],sigma[1])) + log(1/alpha * (int_R(x[2]/alpha,mu,sigma, rho,l) - int_R(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_R(x[2],mu,sigma, rho,l/thresh));
+      loglik = log(1/alpha * (int_R(x[2]/alpha,mu,sigma, rho,l) - int_R(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_R(x[2],mu,sigma, rho,l/thresh));
     }
     return loglik;
   }
@@ -48,10 +48,10 @@ functions {
     real a_l;
     if(x[3] == 1){
       //loglik = (-(x[1] - mu[1])^2/(2*sigma[1]^2))-log(sigma[1]);
-      loglik = normal_lpdf(x[1]|mu[2],sigma[2])-log(normal_cdf(l,mu[2],sigma[2]));
+      loglik = normal_lpdf(x[1]|mu[2],sigma[2]);
     }
     else{
-      loglik = -log(1 - normal_cdf(l,mu[2],sigma[2])) + log(1/alpha * (int_T(x[2]/alpha,mu,sigma, rho,l) - int_T(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_T(x[2],mu,sigma, rho,l/thresh));
+      loglik = log(1/alpha * (int_T(x[2]/alpha,mu,sigma, rho,l) - int_T(x[2]/alpha,mu,sigma, rho,l/thresh)) + int_T(x[2],mu,sigma, rho,l/thresh));
     }
     return loglik;
   }
@@ -84,6 +84,7 @@ data {
   real l_T20;
   real l_T40;
   real l_T60;
+  real thresh;
 }
 
 // The parameters accepted by the model. Our model
@@ -93,7 +94,6 @@ parameters {
   real<lower=0> sigma[2];
   real<lower=-1,upper = 1> rho;
   real<lower=0, upper = 5> alpha[6];
-  real<lower=0,upper = 1> thresh;
 }
 
 //generated quantities{
@@ -133,43 +133,4 @@ model {
     target += normal_lpdf(t_x[i]|mu[1],sigma[1]);
     }    
 }
-
-
-
-// 
-// generated quantities {
-//   vector[N_R20+N_R40+N_R60+N_T20+N_T40+N_T60+N_x+N_y] log_lik;
-//   for (n in 1:N_R20) {
-//     log_lik[n] = 
-//     DmgR_lpdf(X_R20[n,]|l_R20,mu,sigma,rho,alpha[1],thresh);
-//   }
-//   for (n in 1:N_R40) {
-//     log_lik[n+N_R20] = 
-//     DmgR_lpdf(X_R40[n,]|l_R40,mu,sigma,rho,alpha[2],thresh);
-//   }
-//   for (n in 1:N_R60) {
-//     log_lik[n+N_R20+N_R40] =
-//     DmgR_lpdf(X_R60[n,]|l_R60,mu,sigma,rho,alpha[3],thresh);
-//   }
-//   for (n in 1:N_T20) {
-//     log_lik[n+N_R20+N_R40+N_R60] =
-//     DmgT_lpdf(X_T20[n,]|l_T20,mu,sigma,rho,alpha[4],thresh);
-//   }
-//   for (n in 1:N_T40) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20] =
-//     DmgT_lpdf(X_T40[n,]|l_T40,mu,sigma,rho,alpha[5],thresh);
-//   }
-//   for (n in 1:N_T60) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40] =
-//     DmgT_lpdf(X_T60[n,]|l_T60,mu,sigma,rho,alpha[6],thresh);
-//   }
-//   for (n in 1:N_x) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40+N_T60] =
-//     normal_lpdf(t_x[n]|mu[1],sigma[1]);
-//   }
-//   for (n in 1:N_y) {
-//     log_lik[n+N_R20+N_R40+N_R60+N_T20+N_T40+N_T60+N_x] =
-//     normal_lpdf(t_y[n]|mu[2],sigma[2]);
-//   }
-// }
 
