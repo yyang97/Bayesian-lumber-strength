@@ -1,0 +1,620 @@
+---
+title: "lumber strength report"
+author: "Yunfeng Yang"
+date: "2023-06-07"
+output: html_document
+---
+
+# Damage model 
+The original model is 
+
+\begin{equation}\label{eq: original model}
+y^*  = y \cdot I\{c \cdot y > l\} + \alpha \cdot y \cdot I\{c \cdot y < l\}
+\end{equation}
+
+<!-- We may first consider a simplified version without the tuning parameter $c$. -->
+<!-- \begin{equation}\label{eq: simplified model} -->
+<!-- y^*  = y \cdot I\{ y > l\} + \alpha \cdot y \cdot I\{y < l\} -->
+<!-- \end{equation} -->
+
+# Smooth function
+
+Note that we have the indicator function in the model we might consider the smooth function:
+\begin{equation}\label{eq: trans function}
+S(x;s) = \frac{1}{1 + \exp(-s \cdot x)}
+\end{equation},
+where $s$ is the smoothing hyper-parameter to control the smoothness. 
+
+```{r}
+smooth_ind <- function(x,s){
+  return(1/(1+exp(-x*s)))
+}
+x <- seq(from = -10, to= 10, length.out = 500)
+plot(x,ifelse(x>0,1,0),type = "l")
+lines(x,sapply(x,smooth_ind, s = 1),type = "l",col = "red")
+lines(x,sapply(x,smooth_ind, s = 10),type = "l",col = "blue")
+lines(x,sapply(x,smooth_ind, s = 100),type = "l",col = "green")
+legend("topleft", legend=c("Indicator", "s = 1", "s = 10", "s = 100"),
+       col=c("black","red", "blue","green"), lty=1, cex=0.8)
+```
+
+
+Then the model becomes 
+$$
+y^*  = y \cdot \frac{1}{1 + \exp(-s\cdot(cy-l))} + \alpha \cdot y \cdot \frac{1}{1 + \exp(-s\cdot(l-cy))}
+$$
+# the plot 
+```{r}
+### new 
+
+mu <- 48
+sigma <- 19
+#y <- rnorm(N,mean = mu, sd = sigma)
+y <- seq(from = 0.1, to = 100, length = 500)
+l <-  32
+alpha <- 0.45
+c <- 0.65
+s <- 1
+ystar <- y*smooth_ind(c*y-l,s )+ alpha*smooth_ind(l-c*y,s)
+
+plot(y,ystar,type = 'l',lty = 1)
+lines(y,y,lty = 2)
+legend("topleft", legend = c("ystar","y"),lty=1:2)
+```
+
+We have $y \geq y^*$.
+
+The lumber have three groups:
+
+- Group 1: $y <l$, $y^* < l$, i.e., $y^* <y < l$. The lumber pieces are broken blow the proof loading.
+- Group 2: $y >l$, $y^* < l$, i.e. $y^*<l<y$. The lumber pieces are broken during the proof loading process. This groups we only knows how many pieces. 
+- Group 3: $y >l$, $y^* > l$, i.e. $l<y^*<y$. The lumber pieces survived in the proof-loading. And then we destruct them to test their strength.
+
+
+# The PDF calculation 
+
+Given $Y \sim N(\mu, \sigma^2)$, $Y^* = h(Y)$. Then the pdf of $Y^*$,
+$$
+f_{Y^*}(y^*) = f_{Y}(h^{-1}(y^*))|\frac{d}{dy^*}h^{-1}(y^*)|,
+$$
+where $f_Y()$ is the pdf of $Y$, i.e., normal. 
+
+
+Following this, We need the numerical function of $h^{-1}(y^*)$, and its numerical gradient $\frac{d}{dy^*}h^{-1}(y^*)$. (The analytical form doesn't seem available.)
+```{r}
+
+#' The smooth function for the indicator function, which is also called "sigmoid function".
+#' 
+#' @param x, the variable 
+#' @param s, the hyper parameter, higher s means closer the indicator function
+#' @returns the smoothed value.  
+
+smooth_ind <- function(x,s){
+  return(1/(1+exp(-x*s)))
+}
+
+
+
+#' The damage model, smoothed version of 
+#' "y* = y* I(c*x > l) + alpha * y * I(c*x < l)"
+#' 
+#' @param y, the original strength
+#' @param alpha, the damage parameter
+#' @param l, the proof loading level
+#' @param c, the threshold parameter. Damage effects happen exceeding c.
+#' @param s, the temperature parameter for s
+#' @return, the weakened y*, y*<y.
+dmg_model <- function(y,alpha,l,c,s){
+  return(y*smooth_ind(c*y-l,s)+ alpha*y*smooth_ind(l-c*y,s))
+}
+
+#' The damage-inverse model, given a weakened ystar, find the original y
+#' 
+#' @param ystar, the weakened strength
+#' @param alpha, the damage parameter
+#' @param l, the proof loading level
+#' @param c, the threshold parameter. Damage effects happen exceeding c.
+#' @param s, the temperature parameter for s
+#' @return, the original y, y>y*.
+dmg_inverse <- function(ystar,alpha,l,c,s){
+  uniroot((function (x) dmg_model(x,alpha,l,c,s) - ystar), lower = 0, upper = 1000)$root
+}
+# the abs gradient at damage-inverse
+dmg_inverse_grad <- function(ystar,alpha,l,c,s){
+  abs(numDeriv::grad(func = (function(x) dmg_inverse(x,alpha,l,c,s)),
+                     x  = ystar))
+}  
+# dmg_inverse_grad(42,a lpha,l,c,s)
+# ystar <- y*smooth_ind(c*y-l)+ alpha*smooth_ind(l-c*y)
+
+dmglik <- function(ystar,alpha,l,c,s,mu,sigma){
+  y <- dmg_inverse(ystar,alpha,l,c,s)
+  dnorm(y, mean = mu, sd = sigma, log = TRUE)+ log(dmg_inverse_grad(ystar,alpha,l,c,s))
+}
+```
+
+
+```{r}
+
+
+## plot 
+set.seed(8888)
+# the orignal sample size 
+N <- 300
+mu <- 48
+sigma <- 19
+#y <- rnorm(N,mean = mu, sd = sigma)
+l <-  32
+# alpha <- 0.9
+# c <- 0.8
+alpha <- 0.45
+c <- 0.65
+s <- 1
+
+## data 
+
+y <- rnorm(N, mean = mu, sd = sigma )
+y <- y[y>0]
+y_obs <- list()
+# group 1, y^* <y < l
+y_obs$group1 <- y[which(y < l)]
+# group 2, y^*<l<y
+group23 <- y[which(y > l)]
+group23_star <- dmg_model(group23,alpha,l,c,s)
+y_obs$group2 <- length(group23[which(group23 > l &group23_star < l)])
+y_obs$group3 <- group23_star[which(group23_star >l)]
+
+negdmglik_model <- function(theta){
+  mu <- theta[1]
+  sigma <- theta[2]
+  alpha <- theta[3]
+  c <- theta[4]
+  
+  lik1 <- sum(dnorm(y_obs$group1,mean = mu, sd = sigma, log = TRUE))
+  lik2 <- y_obs$group2 * log(
+    pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) -
+      pnorm(l, mean = mu, sd = sigma)
+  )
+  #lik2 <- 0
+  lik3 <- sum(sapply(y_obs$group3,dmglik,alpha,l,c,s,mu,sigma))
+  return(-lik1-lik2-lik3)
+  #return (-lik3)
+}
+
+theta0 <- c(mu,sigma,alpha,c)
+
+```
+
+```{r}
+optimout <- optim(theta0,negdmglik_model,method = "L-BFGS-B",
+                  lower = rep(0.1,4),upper = c(Inf,Inf,1,Inf))
+
+# theta0 is true theta
+rbind(theta0,optimout$par)
+```
+
+
+
+```{r}
+optimCheck::optim_proj(optimout$par,
+                       negdmglik_model,xrng = .5,
+                       xnames = c("mu","sigma","alpha","c"))
+```
+
+<!-- # ```{r} -->
+<!-- # ## plot  -->
+<!-- # set.seed(8888) -->
+<!-- # N <- 300 -->
+<!-- # mu <- 48 -->
+<!-- # sigma <- 19 -->
+<!-- # #y <- rnorm(N,mean = mu, sd = sigma) -->
+<!-- # l <-  32 -->
+<!-- # alpha <- 0.45 -->
+<!-- # c <- 0.65 -->
+<!-- # s <- 1 -->
+<!-- # ``` -->
+<!-- #  -->
+<!-- # ```{r} -->
+<!-- # ## data  -->
+<!-- #  -->
+<!-- # y <- rnorm(N, mean = mu, sd = sigma ) -->
+<!-- # y <- y[y>0] -->
+<!-- # y_obs <- list() -->
+<!-- # # group 1, y^* <y < l -->
+<!-- # y_obs$group1 <- y[which(y < l)] -->
+<!-- # # group 2, y^*<l<y -->
+<!-- # group23 <- y[which(y > l)] -->
+<!-- # group23_star <- dmg_model(group23,alpha,l,c,s) -->
+<!-- # y_obs$group2 <- length(group23[which(group23 > l &group23_star < l)]) -->
+<!-- # y_obs$group3 <- group23[which(group23_star >l)] -->
+<!-- #  -->
+<!-- # negdmglik_model <- function(theta){ -->
+<!-- #   mu <- theta[1] -->
+<!-- #   sigma <- theta[2] -->
+<!-- #   alpha <- theta[3] -->
+<!-- #   c <- theta[4] -->
+<!-- #    -->
+<!-- #   lik1 <- sum(dnorm(y_obs$group1,mean = mu, sd = sigma, log = TRUE)) -->
+<!-- #   lik2 <- y_obs$group2 * log( -->
+<!-- #     pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) - -->
+<!-- #       pnorm(l, mean = mu, sd = sigma) -->
+<!-- #   ) -->
+<!-- #   #lik2 <- 0 -->
+<!-- #   lik3 <- sum(sapply(y_obs$group3,dmglik,alpha,l,c,s,mu,sigma)) -->
+<!-- #   return(-lik1-lik2-lik3) -->
+<!-- # } -->
+<!-- #  -->
+<!-- # ``` -->
+<!-- #  -->
+<!-- #  -->
+<!-- #  -->
+<!-- #  -->
+<!-- # ```{r} -->
+<!-- # theta0 <- c(mu,sigma,alpha,c) -->
+<!-- # optimout <- optim(theta0,negdmglik_model,method = "L-BFGS-B", -->
+<!-- #                   lower = rep(0.1,4),upper = c(Inf,Inf,1,Inf)) -->
+<!-- #  -->
+<!-- # optimCheck::optim_proj(optimout$par, -->
+<!-- #                        negdmglik_model,xrng = .5, -->
+<!-- #                        xnames = c("mu","sigma","alpha","c")) -->
+<!-- # ``` -->
+
+<!-- ## Comparison of the likelihood in group2 and group3 -->
+
+<!-- ```{r} -->
+<!-- alpha_seq <- seq(from = 0.01, to = 0.99, by = 0.01) -->
+
+<!-- ## group 2 likelihood  -->
+<!-- negdmglik_alpha_g2  <- function(alpha){ -->
+<!--   mu <- mu -->
+<!--   sigma <- sigma -->
+<!--   c <- c -->
+<!--     lik2 <- y_obs$group2 * log( -->
+<!--     pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) - -->
+<!--       pnorm(l, mean = mu, sd = sigma) -->
+<!--   ) -->
+
+<!--   return (-lik2) -->
+<!-- } -->
+<!-- neglikg2 <- sapply(alpha_seq,negdmglik_alpha_g2) -->
+
+<!-- ## group 3 likelihood  -->
+<!-- negdmglik_alpha_g3  <- function(alpha){ -->
+<!--   mu <- mu -->
+<!--   sigma <- sigma -->
+<!--   c <- c -->
+
+
+<!--   #lik2 <- 0 -->
+<!--   lik3 <- sum(sapply(y_obs$group3,dmglik,alpha,l,c,s,mu,sigma)) -->
+<!--   # return(-lik1-lik2-lik3) -->
+<!--   return (-lik3) -->
+<!-- } -->
+<!-- neglikg3 <- sapply(alpha_seq,negdmglik_alpha_g3) -->
+
+<!-- ``` -->
+
+<!-- The plot of negative likelihood of alpha in group 2. -->
+<!-- ```{r} -->
+<!-- plot(alpha_seq,neglikg2, type = "l") -->
+<!-- ``` -->
+
+<!-- The plot of negative likelihood of alpha in group 3. -->
+
+<!-- ```{r} -->
+<!-- plot(alpha_seq,neglikg3, type = "l") -->
+<!-- ``` -->
+
+
+
+<!-- ```{r} -->
+<!-- negdmglik_alpha  <- function(alpha){ -->
+<!--   mu <- mu -->
+<!--   sigma <- sigma -->
+<!--   c <- c -->
+
+<!--   lik1 <- sum(dnorm(y_obs$group1,mean = mu, sd = sigma, log = TRUE)) -->
+<!--   lik2 <- y_obs$group2 * log( -->
+<!--     pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) - -->
+<!--       pnorm(l, mean = mu, sd = sigma) -->
+<!--   ) -->
+<!--   #lik2 <- 0 -->
+<!--   lik3 <- sum(sapply(y_obs$group3,dmglik,alpha,l,c,s,mu,sigma)) -->
+<!--   # return(-lik1-lik2-lik3) -->
+<!--   return (-lik2-lik3) -->
+<!-- } -->
+
+<!-- alpha_seq <- seq(from = 0.01, to = 0.99, by = 0.01) -->
+<!-- negloglik <- sapply(alpha_seq,negdmglik_alpha) -->
+
+<!-- ``` -->
+
+<!-- The plot of negatgive likelihood in group 2 and group 3(i.e., likelihood in group 2 + likelihood in group 3). It seems that they are not balanced. And the group 2 dominates the likelihood.  -->
+
+<!-- ```{r} -->
+<!-- plot(alpha_seq,negloglik, type = "l") -->
+
+<!-- ``` -->
+
+# Real data analysis 
+
+In this section, we apply the damage model to the real dataset. 
+
+I also used the logit and expit transformation to map the damage effect parameter $\alpha$ (0,1) to R for convenience transformation. 
+
+Further, the total sample size of the real dataset is N = 300.
+```{r}
+bending <- read.csv("bending-pl.csv", header = T)
+
+bending[,1] <- bending[,1]/1000*6.895
+l <- 4500/1000*6.895
+# bending_mar <- bending[1:195,]
+# bending_dmg <- bending[195:341,]
+
+R100_data <- bending[bending[,2] == "R100",1]
+R20_data <- bending[bending[,2] == "R20",1]
+R20R100_data <- bending[bending[,2] == "R20R100",1]
+
+# 97 pieces breaking in the loading process.
+g2 <- 97
+mu <- 48
+sigma <- 19
+
+s <- 1
+```
+
+```{r}
+
+#' The smooth function for the indicator function, which is also called "sigmoid function".
+#' 
+#' @param x, the variable 
+#' @param s, the hyper parameter, higher s means closer the indicator function
+#' @returns the smoothed value.  
+
+smooth_ind <- function(x,s){
+  return(1/(1+exp(-x*s)))
+}
+
+
+
+#' The damage model, smoothed version of 
+#' "y* = y* I(c*x > l) + alpha * y * I(c*x < l)"
+#' 
+#' @param y, the original strength
+#' @param alpha, the damage parameter
+#' @param l, the proof loading level
+#' @param c, the threshold parameter. Damage effects happen exceeding c.
+#' @param s, the temperature parameter for s
+#' @return, the weakened y*, y*<y.
+dmg_model <- function(y,alpha,l,c,s){
+  return(y*smooth_ind(c*y-l,s)+ alpha*y*smooth_ind(l-c*y,s))
+}
+
+#' The damage-inverse model, given a weakened ystar, find the original y
+#' 
+#' @param ystar, the weakened strength
+#' @param alpha, the damage parameter
+#' @param l, the proof loading level
+#' @param c, the threshold parameter. Damage effects happen exceeding c.
+#' @param s, the temperature parameter for s
+#' @return, the original y, y>y*.
+dmg_inverse <- function(ystar,alpha,l,c,s){
+  uniroot((function (x) dmg_model(x,alpha,l,c,s) - ystar), lower = 0, upper = 1000)$root
+}
+# the abs gradient at damage-inverse
+dmg_inverse_grad <- function(ystar,alpha,l,c,s){
+  abs(numDeriv::grad(func = (function(x) dmg_inverse(x,alpha,l,c,s)),
+                     x  = ystar))
+}  
+# dmg_inverse_grad(42,a lpha,l,c,s)
+# ystar <- y*smooth_ind(c*y-l)+ alpha*smooth_ind(l-c*y)
+
+dmglik <- function(ystar,alpha,l,c,s,mu,sigma){
+  y <- dmg_inverse(ystar,alpha,l,c,s)
+  dnorm(y, mean = mu, sd = sigma, log = TRUE)+ log(dmg_inverse_grad(ystar,alpha,l,c,s))
+}
+
+logit <- function(x){
+  return(log(x/(1-x)))
+}
+
+expit <- function(x){
+  1/(1+exp(-x))
+}
+
+negdmglik_model <- function(theta){
+  mu <- theta[1]
+  sigma <- theta[2]
+  # alpha <- theta[3]
+  alpha <- expit(theta[3])
+  c <- theta[4]
+  
+  lik1 <- sum(dnorm(R20_data,mean = mu, sd = sigma, log = TRUE))
+  lik2 <- g2 * log(
+    pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) -
+      pnorm(l, mean = mu, sd = sigma)
+  )
+  #lik2 <- 0
+  lik3 <- sum(sapply(R20R100_data,dmglik,alpha,l,c,s,mu,sigma))
+  lik4 <- sum(dnorm(R100_data,mean = mu, sd = sigma, log = TRUE))
+  return(-lik1-lik2-lik3-lik4)
+}
+
+negdmglik_model_grad <- function(theta){
+  numDeriv::grad(negdmglik_model,theta_test)
+}
+theta_test <- c(mu,sigma,logit(0.5),.6)
+
+
+
+
+theta_test <- c(47.9985218, 18.9804222,logit(0.4548490),  0.6515348)
+negdmglik_model(theta_test)
+optimout <- optim(par = theta_test,
+                  fn = negdmglik_model,
+                  gr = negdmglik_model_grad,
+                  method = "BFGS")
+optimout$par
+
+expit(optimout$par[3])
+
+
+```
+
+
+```{r}
+s <- 1
+negdmglik_model_unconstraint <- function(theta){
+  mu <- theta[1]
+  sigma <- theta[2]
+  # alpha <- theta[3]
+  alpha <- theta[3]
+  c <- theta[4]
+  
+  lik1 <- sum(dnorm(R20_data,mean = mu, sd = sigma, log = TRUE))
+  lik2 <- g2 * log(
+    pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) -
+      pnorm(l, mean = mu, sd = sigma)
+  )
+  #lik2 <- 0
+  lik3 <- sum(sapply(R20R100_data,dmglik,alpha,l,c,s,mu,sigma))
+  lik4 <- sum(dnorm(R100_data,mean = mu, sd = sigma, log = TRUE))
+  return(-lik1-lik2-lik3-lik4)
+}
+
+theta_opt <- optimout$par
+theta_opt[3] <- expit(theta_opt[3])
+optimCheck::optim_proj(theta_opt,
+                       negdmglik_model_unconstraint ,xrng = .5,
+                       xnames = c("mu","sigma","alpha","c"))
+```
+
+The plot shows that alpha does not seem to reach the mode.
+
+
+## Real data analysis: control the other three parameter and only optimize alpha
+
+```{r}
+## the only plot for alpha
+
+negdmglik_alpha <- function(alpha){
+  mu <- 47.9985218
+  sigma <- 18.9804222
+  # alpha <- theta[3]
+  c <- 0.6515348
+
+  lik1 <- sum(dnorm(R20_data,mean = mu, sd = sigma, log = TRUE))
+  lik2 <- g2 * log(
+    pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) -
+      pnorm(l, mean = mu, sd = sigma)
+  )
+  #lik2 <- 0
+  lik3 <- sum(sapply(R20R100_data,dmglik,alpha,l,c,s,mu,sigma))
+  lik4 <- sum(dnorm(R100_data,mean = mu, sd = sigma, log = TRUE))
+  return(-lik1-lik2-lik3-lik4)
+}
+
+s <- 1
+alpha_opt <- optimize(negdmglik_alpha,c(.01,.99))
+
+
+alpha_seq <- seq(from = 0.01, to = 0.5, length =200)
+plot(alpha_seq, sapply(alpha_seq,negdmglik_alpha),type = "l", ylab = "neglik")
+```
+
+```{r}
+alpha_opt$minimum
+```
+
+Although the likelihood not very smooth, but the plot does indicates that the mode is around 0.24.
+
+
+# real data test
+
+As all group3 has ystar (i.e., the damaged pieces), I tried to transform them back to the original y. 
+
+```{r}
+test_data <- cbind(R20R100_data,
+                   alpha45 = sapply(R20R100_data, dmg_inverse,0.45,l,0.65,s),
+                   alpha25 = sapply(R20R100_data, dmg_inverse,0.25,l,0.65,s))
+test_data 
+```
+
+It seems that the result from $\alpha = 0.45$ and $\alpha = 0.25$ gives very similar y (the undamaged strength).
+
+
+```{r}
+alpha <- 0.25
+c <- 0.65
+y <- seq(from  = 0.01, to = 100, length = 200)
+ystar <- dmg_model(y,alpha,l,c,s =1)
+plot(y,ystar,type = 'l',lty = 1)
+lines(y,dmg_model(y,alpha = 0.45,l,c,s =1),lty = 2)
+legend("topleft", legend = c("ystar alpha = 0.45","ystar alpha = 0.25"),lty=1:2)
+#abline(v = l)
+abline(v = l/c)
+```
+
+
+<!-- # the loglik vs alpha  -->
+
+<!-- ```{r} -->
+<!-- negdmglik_alpha <- function(alpha){ -->
+<!--   mu <- 47.9985218 -->
+<!--   sigma <- 18.9804222 -->
+<!--   # alpha <- theta[3] -->
+<!--   c <- 0.6515348 -->
+
+<!--   lik1 <- sum(dnorm(R20_data,mean = mu, sd = sigma, log = TRUE)) -->
+<!--   lik2 <- g2 * log( -->
+<!--     pnorm(dmg_inverse(l,alpha,l,c,s), mean = mu, sd = sigma) - -->
+<!--       pnorm(l, mean = mu, sd = sigma) -->
+<!--   ) -->
+<!--   #lik2 <- 0 -->
+<!--   lik3 <- sum(sapply(R20R100_data,dmglik,alpha,l,c,s,mu,sigma)) -->
+<!--   lik4 <- sum(dnorm(R100_data,mean = mu, sd = sigma, log = TRUE)) -->
+<!--   return(-lik1-lik2-lik3-lik4) -->
+<!-- } -->
+
+
+<!-- alpha <- seq(from = 0.01, to = 0.99, by = 0.01) -->
+<!-- plot(alpha, sapply(alpha,negdmglik_alpha),type = "l", ylab = "neglik") -->
+<!-- ``` -->
+
+
+
+<!-- # check the likelihood of the damage model -->
+
+<!-- In this section, I suppose all lumber samples are damaged. If the likelihood has the mode around the true value, it can indicate the likelihood is correct. -->
+
+<!-- ```{r} -->
+
+
+<!-- N <- 1000 -->
+<!-- ## suppose all observations are damaged  -->
+<!-- set.seed(8888) -->
+<!-- y <- rnorm(N, mean = mu, sd = sigma ) -->
+<!-- y <- y[y>0] -->
+<!-- ystar <- dmg_model(y,alpha,l,c,s) -->
+
+<!-- negg3 <- function(theta){ -->
+<!--   mu <- theta[1] -->
+<!--   sigma <- theta[2] -->
+<!--   alpha <- theta[3] -->
+<!--   c <- theta[4] -->
+<!--   lik3 <- sum(sapply(ystar,dmglik,alpha,l,c,s,mu,sigma)) -->
+<!--   return (-lik3) -->
+<!-- } -->
+
+<!-- negg3(theta0) -->
+
+<!-- optimCheck::optim_proj(theta0, -->
+<!--                        negg3, -->
+<!--                        xrng = .5, -->
+<!--                        xnames = c("mu","sigma","alpha","c")) -->
+
+
+
+<!-- ``` -->
+
+<!-- The likelihood has the mode around the true value (red lines). The likelihood of the damage model should be correct. -->
