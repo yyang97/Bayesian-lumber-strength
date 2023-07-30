@@ -12,7 +12,7 @@ R100_data <- bending[bending[,2] == "R100",1]
 R20_data <- bending[bending[,2] == "R20",1]
 R20R100_data <- bending[bending[,2] == "R20R100",1]
 
-
+g2 <- 97
 
 
 ##--------------stan fitting----------------
