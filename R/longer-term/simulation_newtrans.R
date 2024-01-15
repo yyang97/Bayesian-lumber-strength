@@ -62,8 +62,8 @@ sigma <- 19
 #y <- rnorm(N,mean = mu, sd = sigma)
 l <-  32
 # alpha <- 0.9
-c <- 0.8
-alpha <- 0.9
+c <- 0.7
+alpha <- 0.85
 # alpha <- 0.24
 # c <- 0.65
 s <- 1
@@ -99,13 +99,11 @@ negdmglik_model <- function(theta){
 }
 
 theta0 <- c(mu,sigma,alpha,c)
-optimCheck::optim_proj(theta0,
-                       negdmglik_model,xrng = .5,
-                       xnames = c("mu","sigma","alpha","c"))
 
-
-optimout <- optim(theta0,negdmglik_model,method = "L-BFGS-B",
-                  lower = rep(0.1,4),upper = c(Inf,Inf,1,Inf))
+optimout <- optim(theta0,negdmglik_model)
+optimout$par
+# optimout <- optim(theta0,negdmglik_model,method = "L-BFGS-B",
+#                   lower = rep(0.1,4),upper = c(Inf,Inf,1,Inf))
 
 optimCheck::optim_proj(optimout$par,
                        negdmglik_model,xrng = .5,
